@@ -2,7 +2,7 @@
 
 Belle's holiday gift tracker. Tracks gifts for ProductsGo staff, Auragami staff, home (nanny), family and friends, year after year, with budgets, a shopping list and printable gift tags.
 
-Live on Firebase Hosting. Data in Firestore. Google sign-in.
+Live at https://presentlyhqpresently-gifts.web.app (Firebase project `presently-63110`, Hosting site `presentlyhqpresently-gifts`). Data in Firestore. Google sign-in.
 
 ## Layout
 
