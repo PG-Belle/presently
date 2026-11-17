@@ -5,5 +5,38 @@ service cloud.firestore {
     match /users/{uid}/items/{docId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // Shared wishlists. The document id is a long random key and works like a
+    // share link: whoever has the link can open that one list. Nobody can list
+    // or search the collection, so lists can't be discovered.
+
+    // A kid's list: anyone with the kid link can add, star and remove items.
+    match /wishlists/{key} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.items is list;
+      allow update: if request.resource.data.owner == resource.data.owner
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['items', 'kid', 'updated'])
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 150;
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+    }
+
+    // The family side of a list: who is getting what. Kept in its own document
+    // so the kid link never reveals claims. Lookup results are written only by
+    // the findDeals function.
+    match /families/{key} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.owner == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/wishlists/$(request.resource.data.kidKey));
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claims', 'updated'])
+        && request.resource.data.claims is map
+        && request.resource.data.claims.size() <= 150;
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+    }
   }
 }

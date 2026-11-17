@@ -237,6 +237,10 @@ svg{display:block}
 .hint{margin:0;font-size:13.5px;color:var(--soft)}
 .phrow{display:flex;gap:14px;align-items:center}
 .btn2{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:99px;background:var(--blue);color:var(--blk);font-weight:700;cursor:pointer}
+.wl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn2.fam{background:var(--green)}
+.btn2:disabled{opacity:.6}
+.links a.wish{background:var(--pink)}
 .btn2 svg{width:18px;height:18px}
 .seg{display:flex;gap:6px;flex-wrap:wrap}
 .seg button{flex:1 0 auto;min-height:44px;padding:0 14px;border-radius:99px;border:var(--bd);background:transparent;font:700 15px Poppins,sans-serif}
@@ -345,6 +349,7 @@ const I={
  camera:ui('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
  tag:ui('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>'),download:ui('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
  work:ui('<rect x="3" y="7.5" width="18" height="12.5" rx="2"/><path d="M9 7.5V5h6v2.5M3 13h18"/>'),
+ gift2:ui('<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9c-2-4-6-4-6-1.5S10 9 12 9c2 0 6-.5 6-1.5S14 5 12 9"/>'),
  grid:ui('<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'),rows:ui('<path d="M4 6h16M4 12h16M4 18h16"/>'),chev:ui('<path d="M9 6l6 6-6 6"/>'),
  spark:ui('<path d="M12 3v5M12 16v5M3 12h5M16 12h5M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/>')
 };
@@ -480,7 +485,7 @@ function card(p){const Y=state.year,a=ageOf(p),f=facts(p),fi=(factIdx[p.id]||0)%
  <div class="meta"><span class="pill" style="--t:${gColor(p.group)}">${esc(gLabel(p.group))}</span>${(p.also||[]).filter(id=>id!==p.group&&groups().some(g=>g.id===id)).map(id=>`<span class="pill" style="--t:${gColor(id)}">${esc(gLabel(id))}</span>`).join('')}${a!==null?`<span>Age ${a}</span>`:''}${b?`<span>${I.cake} ${fmtShort(b)}</span>`:''}${parseD(p.started)?`<span>${I.work} ${tenureTxt(parseD(p.started))}</span>`:''}${p.sample?'<span class="pill smp">Sample</span>':''}</div></div>
  <button class="ib" data-act="edit" data-p="${p.id}" aria-label="Edit ${esc(p.name)}">${I.pencil}</button>${state.layout==='list'?`<button class="ib" data-act="lopen" data-p="${p.id}" aria-label="Collapse ${esc(p.name)}">${I.x}</button>`:''}</header>
  ${f.length?`<button class="fact" data-act="fact" data-p="${p.id}">${I.spark}<span>${esc(f[fi])}</span>${f.length>1?'<small>tap for more</small>':''}</button>`:''}
- ${(p.links||[]).length?`<div class="links">${p.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${I.link} ${esc(linkLabel(l.url))} list</a>`).join('')}</div>`:''}
+ ${(p.links||[]).length||p.wish?`<div class="links">${p.wish?`<a class="wish" href="/list.html?f=${esc(p.wish.f)}" target="_blank" rel="noopener">${I.gift2} Wishlist</a>`:''}${(p.links||[]).map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${I.link} ${esc(linkLabel(l.url))} list</a>`).join('')}</div>`:''}
  ${p.notes?`<p class="notes">${esc(p.notes)}</p>`:''}
  ${gy.length?`<ul class="gl">${gy.map(g=>giftRow(p,g)).join('')}</ul>`:''}
  ${state.adding===p.id?`<form class="addg" data-p="${p.id}"><input name="n" placeholder="Gift idea or paste a link" aria-label="New gift for ${esc(p.name)}" autocomplete="off"><input name="pr" inputmode="decimal" placeholder="$ price" aria-label="Price"><button class="add" aria-label="Add gift">${I.plus}</button><button type="button" class="gotq ${state.addGot?'on':''}" data-act="gotq" aria-pressed="${!!state.addGot}"><span>${I.check}</span>Already got it</button></form>`:''}
@@ -549,9 +554,22 @@ function editorHtml(){const p=draft,isNew=!state.people[p.id],cur=p.icon||DEFICO
  <div class="f"><span>Icon</span><div class="icons">${Object.keys(ICONS).map(n=>`<button type="button" class="ic ${cur===n?'on':''}" data-act="icset" data-v="${n}" aria-label="${n}" aria-pressed="${cur===n}">${icon(n)}</button>`).join('')}</div></div>
  <div class="f"><span>Wishlists &amp; gift lists</span><div id="lk">${(p.links||[]).map((l,i)=>`<div class="lr"><input class="lu" type="url" inputmode="url" value="${esc(l.url)}" placeholder="Paste a list link (Amazon, Target, Etsy…)" aria-label="List link"><button type="button" class="ib" data-act="lkrm" data-v="${i}" aria-label="Remove link">${I.x}</button></div>`).join('')}</div>
  <div><button type="button" class="lnk" data-act="lkadd">${I.plus} Add a list link</button></div></div>
+ <div class="f"><span>Presently wishlist</span>${p.wish?`<div class="wl"><button type="button" class="btn2" data-act="wcopy" data-v="k">${I.link} Copy ${esc(firstName(p.name))}’s link</button><button type="button" class="btn2 fam" data-act="wcopy" data-v="f">${I.link} Copy family link</button><a class="lnk" href="/list.html?f=${esc(p.wish.f)}" target="_blank" rel="noopener">Open family view</a></div>
+ <p class="hint">${esc(firstName(p.name))} adds and stars things with their link. Family use the other link to claim gifts and find where to buy. Claims stay hidden from ${esc(firstName(p.name))}.</p>`
+ :isNew?'<p class="hint">Save this person first, then you can make a wishlist they can add to.</p>'
+ :!col?'<p class="hint">Sign in to make a shareable wishlist.</p>'
+ :`<div><button type="button" class="btn2" data-act="wmake" ${state.wmaking?'disabled':''}>${I.plus} Make a wishlist for ${esc(firstName(p.name))}</button></div><p class="hint">A link they can add to and update as they grow, plus a family link so nobody doubles up.</p>`}</div>
  <label class="f"><span>Notes</span><textarea id="fno" rows="2" placeholder="Sizes, favorite colors, what they’re into…">${esc(p.notes||'')}</textarea></label>
  <label class="f"><span>Budget for this person (optional)</span><input id="fbu" inputmode="decimal" placeholder="$" value="${p.budget?esc(p.budget):''}"></label>
  <div class="acts">${isNew?'':'<button type="button" class="del" data-act="pdel">Remove person</button>'}<button type="button" class="cta" data-act="psave">${isNew?'Add to list':'Save'}</button></div></div>`}
+const firstName=n=>(n||'').trim().split(/\s+/)[0]||'Their';
+const wkey=()=>{const a=new Uint8Array(24);crypto.getRandomValues(a);return [...a].map(b=>'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b%62]).join('')};
+async function makeWish(){if(!fsdb||!auth||!auth.currentUser||!draft)return;const id=draft.id,kid=firstName(draft.name),u=auth.currentUser.uid,k=wkey(),f=wkey();
+ state.wmaking=true;reEditor();
+ try{const b=fsdb.batch();b.set(fsdb.doc('wishlists/'+k),{owner:u,kid,items:[],updated:Date.now()});b.set(fsdb.doc('families/'+f),{owner:u,kidKey:k,kid,claims:{},updated:Date.now()});await b.commit();
+  const p=state.people[id];if(p){p.wish={k,f};put(id,p)}if(draft&&draft.id===id){draft.wish={k,f};reEditor()}toast('Wishlist made. Copy the links to share')}
+ catch(e){toast('Couldn’t make the wishlist. Try again')}
+ state.wmaking=false;if(draft&&draft.id===id)reEditor()}
 function syncDraft(){if(!draft)return;const v=id=>{const e=$('#'+id);return e?e.value:''};
  draft.name=v('fn').trim();draft.birthday=v('fb')||(/^--/.test(draft.birthday||'')?draft.birthday:'');draft.started=v('fs');draft.notes=v('fno').trim();draft.budget=parseMoney(v('fbu'))||'';
  const fa=v('fa').trim();if(!draft.birthday&&fa!==''&&!isNaN(+fa)){draft.age=Math.max(0,Math.round(+fa));draft.ageYear=THISYEAR}else if(!draft.birthday&&fa===''){draft.age=null}
@@ -709,6 +727,9 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
  case 'add':openEditor(null);break;
  case 'edit':openEditor(pid);break;
  case 'view':state.view=v;state.adding=null;renderVt();renderChips();renderGrid();window.scrollTo({top:$('#vt').offsetTop-12,behavior:'smooth'});break;
+ case 'wmake':makeWish();break;
+ case 'wcopy':{const w=draft&&draft.wish;if(!w)break;const url=location.origin+'/list.html?'+(v==='k'?'k='+w.k:'f='+w.f);const who=v==='k'?firstName(draft.name)+'’s link':'Family link';
+  try{navigator.clipboard.writeText(url).then(()=>toast(who+' copied'),()=>toast(url))}catch(e){toast(url)}break}
  case 'layout':state.layout=v;state.open=null;try{localStorage.setItem('presently.layout',v)}catch(e){}renderGrid();break;
  case 'lopen':{state.open=state.open===pid?null:pid;state.adding=null;renderGrid();const c=$('#c-'+pid);if(c&&state.open)c.scrollIntoView({behavior:'smooth',block:'nearest'});break}
  case 'showgot':state.showGot=!state.showGot;renderGrid();break;
@@ -780,13 +801,13 @@ drawArt();render();
 // ---------- account sync (Firebase) ----------
 // Each signed-in user gets users/<uid>/items/<docId>: one doc per person plus a "settings" doc.
 // localStorage stays as an on-device copy so the app still works signed out or offline.
-let auth=null;
+let auth=null,fsdb=null;
 function renderAcct(u){const sb=$('#signbar');if(sb)sb.innerHTML=auth&&!u?`<div class="signbar"><span><b>Sign in to sync</b>Save your list to your account so it's the same on your phone and laptop.</span><button class="cta" data-act="signin">Sign in with Google</button></div>`:'';const el=$('#acct');if(!el)return;el.innerHTML=!auth?'':u?`${esc(u.email||'Signed in')} · <button class="lnk" data-act="signout">Sign out</button>`:`<button class="lnk" data-act="signin">Sign in with Google to sync</button>`}
 function signIn(){const pv=new firebase.auth.GoogleAuthProvider();pv.setCustomParameters({prompt:'select_account'});
  auth.signInWithPopup(pv).catch(e=>{const c=e&&e.code||'';if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment'||c==='auth/cancelled-popup-request')auth.signInWithRedirect(pv);else if(c!=='auth/popup-closed-by-user')toast('Sign-in didn’t work ('+c+')')})}
 (()=>{
  if(!(window.firebase&&firebase.apps&&firebase.apps.length)){setSync('Saved on this device');return}
- auth=firebase.auth();const fs=firebase.firestore();
+ auth=firebase.auth();const fs=firebase.firestore();fsdb=fs;
  try{fs.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}
  auth.getRedirectResult().catch(()=>toast('Sign-in didn’t finish. Try again'));
  let unsub=null;
