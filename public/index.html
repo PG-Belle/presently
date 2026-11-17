@@ -74,6 +74,10 @@ svg{display:block}
 .lnk{border:0;background:none;padding:6px 0;color:var(--yellow);font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;display:inline-flex;align-items:center;gap:4px}
 .lnk svg{width:16px;height:16px}
 .sync{font-size:12px;color:var(--soft);margin:6px 4px 0;text-align:right}.sync .lnk{font-size:12px;padding:4px 0}#acct:not(:empty):before{content:' · '}
+.signbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;background:var(--blue);color:var(--blk);border-radius:22px;padding:14px 18px;margin-bottom:12px;font-weight:700}
+.signbar b{display:block;font:400 18px "Rammetto One",sans-serif;text-transform:uppercase}
+.signbar span{flex:1 1 240px;font-size:14px;line-height:1.4}
+.signbar .cta{background:var(--ink);box-shadow:3px 3px 0 var(--blk)}
 .bk{width:100%;min-height:120px;border:var(--bd);border-radius:14px;background:var(--bg);padding:10px 12px;font:13px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
 
 /* birthdays + tools */
@@ -249,6 +253,7 @@ svg{display:block}
  <svg class="scene" id="scene" viewBox="0 0 600 150" preserveAspectRatio="xMidYMax meet" aria-hidden="true"></svg>
 </div></div></header>
 <main class="wrap">
+ <div id="signbar"></div>
  <section class="sum" id="sum"></section>
  <p class="sync"><span id="sync">Saved on this device</span><span id="acct"></span> · <button class="lnk" data-act="backup">Backup / import</button></p>
  <div id="bd"></div>
@@ -686,7 +691,7 @@ drawArt();render();
 // Each signed-in user gets users/<uid>/items/<docId>: one doc per person plus a "settings" doc.
 // localStorage stays as an on-device copy so the app still works signed out or offline.
 let auth=null;
-function renderAcct(u){const el=$('#acct');if(!el)return;el.innerHTML=!auth?'':u?`${esc(u.email||'Signed in')} · <button class="lnk" data-act="signout">Sign out</button>`:`<button class="lnk" data-act="signin">Sign in with Google to sync</button>`}
+function renderAcct(u){const sb=$('#signbar');if(sb)sb.innerHTML=auth&&!u?`<div class="signbar"><span><b>Sign in to sync</b>Save your list to your account so it's the same on your phone and laptop.</span><button class="cta" data-act="signin">Sign in with Google</button></div>`:'';const el=$('#acct');if(!el)return;el.innerHTML=!auth?'':u?`${esc(u.email||'Signed in')} · <button class="lnk" data-act="signout">Sign out</button>`:`<button class="lnk" data-act="signin">Sign in with Google to sync</button>`}
 function signIn(){const pv=new firebase.auth.GoogleAuthProvider();pv.setCustomParameters({prompt:'select_account'});
  auth.signInWithPopup(pv).catch(e=>{const c=e&&e.code||'';if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment'||c==='auth/cancelled-popup-request')auth.signInWithRedirect(pv);else if(c!=='auth/popup-closed-by-user')toast('Sign-in didn’t work ('+c+')')})}
 (()=>{
