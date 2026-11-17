@@ -94,11 +94,35 @@ svg{display:block}
 .chip.ghost{border-style:dashed;gap:6px}
 .chip svg{width:15px;height:15px}
 .srch{flex:1 1 200px;min-height:42px;border:var(--bd);background:var(--bg);border-radius:99px;padding:0 20px;font-size:16px}
+.lay{display:flex;border:var(--bd);border-radius:99px;overflow:hidden;flex:0 0 auto}
+.lay button{border:0;background:none;width:48px;min-height:42px;display:grid;place-items:center;color:var(--ink)}
+.lay button+button{border-left:2px solid var(--line)}
+.lay button.on{background:var(--ink);color:var(--blk)}
+.lay svg{width:19px;height:19px}
+.lay[hidden]{display:none}
 .vt{display:flex;width:fit-content;margin:16px 0 0;border:var(--bd);border-radius:99px;overflow:hidden}
 .vt button{border:0;background:none;min-height:44px;padding:0 20px;font:15px "Rammetto One",sans-serif;text-transform:uppercase;display:inline-flex;align-items:center;gap:8px}
 .vt button+button{border-left:2px solid var(--line)}
 .vt button.on{background:var(--blue);color:var(--blk)}
 .vt small{font:700 12px Poppins,sans-serif;background:var(--bg);color:var(--ink);border-radius:99px;padding:0 8px}
+
+/* list view */
+.grid.list{grid-template-columns:minmax(0,1fr);gap:8px}
+.lrow{background:var(--card);border:var(--bd);border-radius:18px}
+.lrow.done{border-color:var(--green)}
+.rh{width:100%;display:flex;align-items:center;gap:12px;border:0;background:none;padding:8px 14px 8px 8px;min-height:56px;text-align:left;color:var(--ink)}
+.rh .who{min-width:0}
+.rh b{display:block;font:16px "Rammetto One",sans-serif;text-transform:uppercase;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rh .meta{margin-top:2px}
+.rs{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:13px;font-weight:700;color:var(--soft)}
+.rs .cnt{color:var(--ink);font-size:14px}
+.rs .ok{display:inline-flex;align-items:center;gap:4px;background:var(--green);color:var(--blk);border-radius:99px;padding:1px 10px 1px 6px;font:12px "Rammetto One",sans-serif;text-transform:uppercase}
+.rs .ok svg{width:13px;height:13px}
+.rs .ni{color:var(--pink)}
+.chev{flex:0 0 auto;width:20px;height:20px;color:var(--soft);transition:transform .15s}
+.lopen{display:flex;flex-direction:column;gap:6px}
+.lopen .shut{align-self:flex-end;display:inline-flex;align-items:center;gap:6px;border:0;background:none;color:var(--soft);font:700 13px Poppins,sans-serif;min-height:36px;padding:0 6px}
+.lopen .shut svg{width:16px;height:16px;transform:rotate(180deg)}
 
 /* cards */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:14px;padding:6px 0 40px}
@@ -258,7 +282,7 @@ svg{display:block}
  <p class="sync"><span id="sync">Saved on this device</span><span id="acct"></span> · <button class="lnk" data-act="backup">Backup / import</button></p>
  <div id="bd"></div>
  <div class="vt" id="vt"></div>
- <div class="tools"><div class="chips" id="chips"></div><input class="srch" id="q" type="search" placeholder="Search names or notes" aria-label="Search"></div>
+ <div class="tools"><div class="chips" id="chips"></div><input class="srch" id="q" type="search" placeholder="Search names or notes" aria-label="Search"><div class="lay" id="lay" role="group" aria-label="Layout"></div></div>
  <section class="grid" id="grid"></section>
 </main>
 <footer class="foot"><div class="wrap"><div class="fbox"><b>Presently</b><span>pick it · check it · wrap it</span><span id="fyr"></span></div></div></footer>
@@ -304,13 +328,16 @@ const I={
  cake:ui('<path d="M4 20h16v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2zM4 15c2 1.5 4 1.5 5.3 0 1.4 1.5 4 1.5 5.4 0 1.3 1.5 3.3 1.5 5.3 0M12 11V8M12 5.5v-.5"/>'),
  camera:ui('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
  tag:ui('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>'),download:ui('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+ tiles:ui('<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'),
+ rows:ui('<path d="M4 6h16M4 12h16M4 18h16"/>'),down:ui('<path d="M6 9l6 6 6-6"/>'),
  spark:ui('<path d="M12 3v5M12 16v5M3 12h5M16 12h5M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/>')
 };
 const DEFICON={pg:'gift',auragami:'star',home:'bell',family:'ornament',friends:'tree'};
 
 // ---------- state ----------
 const LS='presently.v1';
-const state={people:{},settings:{budgets:{}},year:THISYEAR,group:'all',need:false,q:'',pop:null,adding:null,view:'cards',showGot:false,newGrp:false};
+const state={people:{},settings:{budgets:{}},year:THISYEAR,group:'all',need:false,q:'',pop:null,adding:null,view:'cards',showGot:false,newGrp:false,layout:'tiles',open:new Set()};
+try{if(localStorage.getItem('presently.layout')==='list')state.layout='list'}catch(e){}
 const factIdx={};
 let col=null,draft=null,undoFn=null;
 try{const s=JSON.parse(localStorage.getItem(LS));if(s&&s.people){state.people=s.people;state.settings=s.settings||{budgets:{}}}}catch(e){}
@@ -429,6 +456,14 @@ function card(p){const Y=state.year,a=ageOf(p),f=facts(p),fi=(factIdx[p.id]||0)%
  ${state.adding===p.id?`<form class="addg" data-p="${p.id}"><input name="n" placeholder="Gift idea or paste a link" aria-label="New gift for ${esc(p.name)}" autocomplete="off"><input name="pr" inputmode="decimal" placeholder="$ price" aria-label="Price"><button class="add" aria-label="Add gift">${I.plus}</button><button type="button" class="gotq ${state.addGot?'on':''}" data-act="gotq" aria-pressed="${!!state.addGot}"><span>${I.check}</span>Already got it</button></form>`:''}
  <footer class="cf"><button class="addp ${state.adding===p.id?'on':''}" data-act="addopen" data-p="${p.id}">${state.adding===p.id?I.x+' Done':I.plus+(gy.length?' Add gift':' Add a gift idea')}</button>${sp||bud?`<span class="${bud&&sp>bud?'over':''}">${money(sp)}${bud?` of ${money(bud)}`:''} spent</span>`:''}
  ${py.length?`<details class="past"><summary>Past years</summary>${py.map(y=>`<div><b>${y}</b>${past[y].map(g=>esc(g.name)+(g.price?` (${money(g.price)})`:'')).join(', ')}</div>`).join('')}</details>`:''}<button class="tagb" data-act="tag" data-p="${p.id}" aria-label="Gift tag for ${esc(p.name)}">${I.tag}</button></footer></article>`}
+function row(p){const Y=state.year,h=hol(p,Y),got=h.filter(g=>g.got).length,done=isDone(p,Y),b=parseD(p.birthday),a=ageOf(p);
+ const sp=giftsY(p,Y).filter(g=>g.got).reduce((s,g)=>s+(+g.price||0),0);
+ if(state.open.has(p.id))return `<div class="lopen">${card(p)}<button class="shut" data-act="rowopen" data-p="${p.id}">${I.down} Show less</button></div>`;
+ return `<article class="lrow ${done?'done':''}" id="c-${p.id}"><button class="rh" data-act="rowopen" data-p="${p.id}" aria-expanded="false">
+ <div class="av sm" style="--t:${gColor(p.group)}">${avatar(p)}</div><div class="who"><b>${esc(p.name)}</b>
+ <div class="meta"><span class="pill" style="--t:${gColor(p.group)}">${esc(gLabel(p.group))}</span>${a!==null?`<span>Age ${a}</span>`:''}${b?`<span>${I.cake} ${fmtShort(b)}</span>`:''}${p.sample?'<span class="pill smp">Sample</span>':''}</div></div>
+ <span class="rs">${done?`<span class="ok">${I.check} Got it</span>`:h.length?`<span class="cnt">${got} of ${h.length}</span>`:'<span class="ni">Needs an idea</span>'}${sp?`<span>${money(sp)}</span>`:''}</span>
+ <span class="chev">${I.down}</span></button></article>`}
 const avatar=p=>p.photo&&/^data:image\//.test(p.photo)?`<img src="${esc(p.photo)}" alt="">`:icon(p.icon||DEFICON[p.group]);
 function shopHtml(list){const Y=state.year;let n=0,sum=0;const sec=[],noIdea=[];
  list.forEach(p=>{const gy=giftsY(p,Y);if(!gy.length){noIdea.push(p);return}const todo=gy.filter(g=>state.showGot||!g.got);if(!todo.length)return;
@@ -443,11 +478,14 @@ function renderGrid(){const ae=document.activeElement,keep=ae&&ae.closest&&ae.cl
  if(!all.length){$('#grid').innerHTML=`<div class="hello"><div class="row">${['gift','tree','gingerbread','ornament','candy'].map(icon).join('')}</div><h2 class="ol pk">Who’s on your list?</h2><p>Add your teams in one go, then family and friends one by one. Drop in gift ideas and wishlist links, tap the circle when a gift is handled, and watch the tally climb.</p><div class="btns"><button class="cta" data-act="bulk">${I.plus} Add a whole team</button><button class="cta" data-act="add" style="background:var(--sky)">${I.plus} Add one person</button><button class="lnk" data-act="sample">Try it with sample people</button></div></div>`;return}
  let list=all.filter(p=>(state.group==='all'||p.group===state.group)&&(state.view==='shop'||!state.need||!isDone(p,state.year))&&(!state.q||(p.name+' '+(p.notes||'')).toLowerCase().includes(state.q)));
  list.sort((a,b)=>(gOrder(a.group)-gOrder(b.group))||a.name.localeCompare(b.name));
- if(state.view==='shop'){$('#grid').innerHTML=shopHtml(list);state.pop=null;return}
- $('#grid').innerHTML=list.map(card).join('')||`<div class="hello"><h2>${state.need?'Everyone here is all set!':'Nobody here yet'}</h2><p>${state.need?'Every person in this view has all their gifts.':'Try another group, or add someone new.'}</p></div>`;
+ if(state.view==='shop'){$('#grid').classList.remove('list');$('#grid').innerHTML=shopHtml(list);state.pop=null;return}
+ const L=state.layout==='list';$('#grid').classList.toggle('list',L);
+ $('#grid').innerHTML=list.map(L?row:card).join('')||`<div class="hello"><h2>${state.need?'Everyone here is all set!':'Nobody here yet'}</h2><p>${state.need?'Every person in this view has all their gifts.':'Try another group, or add someone new.'}</p></div>`;
  state.pop=null;
  if(keep){const f=document.querySelector(`.addg[data-p="${keep.p}"]`);if(f){const ins=f.querySelectorAll('input');ins.forEach((i,k)=>i.value=keep.vals[k]||'');const t=f.querySelector(`[name="${keep.name}"]`);if(t)t.focus()}}}
 function renderVt(){const n=ppl().reduce((s,p)=>s+giftsY(p,state.year).filter(g=>!g.got).length,0);
+ const L=state.layout==='list';$('#lay').hidden=state.view==='shop';
+ $('#lay').innerHTML=`<button class="${L?'':'on'}" data-act="layout" data-v="tiles" aria-pressed="${!L}" aria-label="Tile view" title="Tiles">${I.tiles}</button><button class="${L?'on':''}" data-act="layout" data-v="list" aria-pressed="${L}" aria-label="List view" title="List">${I.rows}</button>`;
  $('#vt').innerHTML=`<button class="${state.view==='cards'?'on':''}" data-act="view" data-v="cards" aria-pressed="${state.view==='cards'}">People</button><button class="${state.view==='shop'?'on':''}" data-act="view" data-v="shop" aria-pressed="${state.view==='shop'}">Shopping list<small>${n}</small></button>`}
 function render(){renderVt();renderHd();renderSum();renderBd();renderChips();renderGrid()}
 
@@ -625,6 +663,8 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
  case 'add':openEditor(null);break;
  case 'edit':openEditor(pid);break;
  case 'view':state.view=v;state.adding=null;renderVt();renderChips();renderGrid();window.scrollTo({top:$('#vt').offsetTop-12,behavior:'smooth'});break;
+ case 'layout':state.layout=v;state.adding=null;try{localStorage.setItem('presently.layout',v)}catch(e){}renderVt();renderGrid();break;
+ case 'rowopen':{if(state.open.has(pid)){state.open.delete(pid);if(state.adding===pid)state.adding=null}else state.open.add(pid);renderGrid();const c=$('#c-'+pid);if(c&&c.getBoundingClientRect().top<0)c.scrollIntoView({block:'start'});break}
  case 'showgot':state.showGot=!state.showGot;renderGrid();break;
  case 'groups':gdraft=clone(groups());openModal(groupsHtml());break;
  case 'gdelgrp':syncG();gdraft.splice(+v,1);$('#modal .ov').innerHTML=groupsHtml();break;
@@ -646,7 +686,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
  case 'yprev':state.year--;render();break;
  case 'ynext':if(state.year<THISYEAR+1){state.year++;render()}break;
  case 'fact':factIdx[pid]=(factIdx[pid]||0)+1;renderGrid();break;
- case 'jump':{state.view='cards';renderVt();state.group='all';state.need=false;state.q='';$('#q').value='';renderChips();renderGrid();const c=$('#c-'+pid);if(c)c.scrollIntoView({behavior:'smooth',block:'center'});break}
+ case 'jump':{state.view='cards';state.open.add(pid);renderVt();state.group='all';state.need=false;state.q='';$('#q').value='';renderChips();renderGrid();const c=$('#c-'+pid);if(c)c.scrollIntoView({behavior:'smooth',block:'center'});break}
  case 'budget':budgetEditor();break;
  case 'bsave':{state.settings.budgets=state.settings.budgets||{};const n=parseMoney($('#bv').value);if(n)state.settings.budgets[state.year]=n;else delete state.settings.budgets[state.year];put('settings',state.settings);closeModal();render();break}
  case 'sample':sample();break;
