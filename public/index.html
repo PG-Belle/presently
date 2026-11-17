@@ -575,7 +575,7 @@ function syncDraft(){if(!draft)return;const v=id=>{const e=$('#'+id);return e?e.
  const fa=v('fa').trim();if(!draft.birthday&&fa!==''&&!isNaN(+fa)){draft.age=Math.max(0,Math.round(+fa));draft.ageYear=THISYEAR}else if(!draft.birthday&&fa===''){draft.age=null}
  draft.links=[...document.querySelectorAll('#lk .lu')].map(i=>({url:i.value}))}
 function openEditor(id){state.newGrp=false;draft=id?clone(state.people[id]):{id:'p_'+uid(),type:'person',name:'',group:state.group!=='all'?state.group:groups()[0].id,birthday:'',age:null,ageYear:THISYEAR,icon:'',photo:'',links:[],notes:'',budget:'',gifts:[],created:Date.now()};openModal(editorHtml())}
-function reEditor(){syncDraft();const y=$('.sheet').scrollTop;$('#modal .ov').innerHTML=editorHtml();$('.sheet').scrollTop=y}
+function reEditor(sync=true){if(sync)syncDraft();const y=$('.sheet').scrollTop;$('#modal .ov').innerHTML=editorHtml();$('.sheet').scrollTop=y}
 const parseMoney=s=>{const n=parseFloat(String(s||'').replace(/[$,\s]/g,''));return isNaN(n)?0:Math.round(n*100)/100};
 function savePerson(){syncDraft();if(!draft.name){$('#fn').classList.add('bad');$('#fn').focus();return}
  draft.type='person';draft.links=draft.links.map(l=>normUrl(l.url)).filter(Boolean).map(url=>({url}));
@@ -771,10 +771,10 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
  case 'grpset':syncDraft();draft.group=v;draft.also=(draft.also||[]).filter(x=>x!==v);reEditor();break;
  case 'alsoset':syncDraft();{const a=draft.also||[];draft.also=a.includes(v)?a.filter(x=>x!==v):a.concat(v)}reEditor();break;
  case 'icset':syncDraft();draft.icon=v;draft.photo='';reEditor();break;
- case 'rmbd':syncDraft();draft.birthday='';reEditor();break;
+ case 'rmbd':syncDraft();draft.birthday='';reEditor(false);break;
  case 'rmphoto':syncDraft();draft.photo='';reEditor();break;
- case 'lkadd':syncDraft();draft.links.push({url:''});reEditor();{const l=document.querySelectorAll('#lk .lu');if(l.length)l[l.length-1].focus()}break;
- case 'lkrm':syncDraft();draft.links.splice(+v,1);reEditor();break;
+ case 'lkadd':syncDraft();draft.links.push({url:''});reEditor(false);{const l=document.querySelectorAll('#lk .lu');if(l.length)l[l.length-1].focus()}break;
+ case 'lkrm':syncDraft();draft.links.splice(+v,1);reEditor(false);break;
  case 'psave':savePerson();break;
  case 'pdel':{if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Tap again to remove';break}
   const p=state.people[draft.id];delete state.people[draft.id];put(p.id,null);closeModal();render();toast(`${p.name} removed`,()=>{state.people[p.id]=p;put(p.id,p);render()});break}
