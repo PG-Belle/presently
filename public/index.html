@@ -74,6 +74,27 @@ svg{display:block}
 .lnk{border:0;background:none;padding:6px 0;color:var(--yellow);font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;display:inline-flex;align-items:center;gap:4px}
 .lnk svg{width:16px;height:16px}
 .sync{font-size:12px;color:var(--soft);margin:6px 4px 0;text-align:right}.sync .lnk{font-size:12px;padding:4px 0}#acct:not(:empty):before{content:' · '}
+.bd.an{background:var(--sky)}.bd.ms{background:var(--pink)}
+.months{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px;margin-top:10px}
+.mo{border:1.5px solid var(--dash);border-radius:18px;padding:12px 14px}
+.mo.now{border:2px solid var(--yellow)}
+.mo header{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.mo header b{font:400 17px "Rammetto One",sans-serif;text-transform:uppercase;color:var(--ink)}
+.mo.now header b{color:var(--yellow)}
+.mo header small{color:var(--soft);font-weight:600;font-size:12px}
+.mrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.mt{width:100%;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--soft)}
+.mt svg{width:15px;height:15px}
+.none{font-size:13px;color:var(--soft)}
+.miss{margin:6px 0 4px;border:1.5px dashed var(--dash);border-radius:16px;padding:10px 14px}
+.miss summary{cursor:pointer;color:var(--yellow);font-weight:600;min-height:36px}.miss summary b{font-weight:800}
+.qt{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.qh,.qr{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+.qh span{font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--soft)}
+.qr>span{font-weight:600;font-size:14px}
+.qr small{display:none}
+.qr input{display:block;width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);padding:6px 8px;font-size:16px;-webkit-appearance:none;appearance:none}
+@media(max-width:600px){.qh{display:none}.qr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-top:1px dashed var(--dash);padding-top:8px}.qr>span:first-child{grid-column:1/-1}.qr small{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--soft);margin-bottom:3px}}
 .signbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;background:var(--blue);color:var(--blk);border-radius:22px;padding:14px 18px;margin-bottom:12px;font-weight:700}
 .signbar b{display:block;font:400 18px "Rammetto One",sans-serif;text-transform:uppercase}
 .signbar span{flex:1 1 240px;font-size:14px;line-height:1.4}
@@ -121,6 +142,7 @@ svg{display:block}
 .ib svg{width:17px;height:17px}
 .ib:disabled{opacity:.3;cursor:not-allowed}
 .fact{display:flex;gap:8px;align-items:flex-start;text-align:left;border:0;border-radius:14px;background:var(--yellow);padding:7px 11px;font-weight:700;font-size:13.5px;color:var(--blk)}
+.fact>span{flex:1}
 .fact svg{flex:0 0 16px;width:16px;height:16px;margin-top:2px}
 .fact small{display:block;font-weight:600;opacity:.7;font-size:11.5px;margin-left:auto;padding-left:8px;white-space:nowrap;align-self:center}
 .links{display:flex;flex-wrap:wrap;gap:6px}
@@ -304,6 +326,7 @@ const I={
  cake:ui('<path d="M4 20h16v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2zM4 15c2 1.5 4 1.5 5.3 0 1.4 1.5 4 1.5 5.4 0 1.3 1.5 3.3 1.5 5.3 0M12 11V8M12 5.5v-.5"/>'),
  camera:ui('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
  tag:ui('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>'),download:ui('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+ work:ui('<rect x="3" y="7.5" width="18" height="12.5" rx="2"/><path d="M9 7.5V5h6v2.5M3 13h18"/>'),
  spark:ui('<path d="M12 3v5M12 16v5M3 12h5M16 12h5M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/>')
 };
 const DEFICON={pg:'gift',auragami:'star',home:'bell',family:'ornament',friends:'tree'};
@@ -346,6 +369,15 @@ function stage(a){
  if(a<=20)return `Age ${a}: dorm-room and first-apartment gifts land well`;
  const dec=Math.floor(a/10)*10;return `${a}: living their ${dec}s`;
 }
+const MILES=[1,5,10,15,20,25,30];
+function nextAnniv(s,now){let t=new Date(now.getFullYear(),s.getMonth(),s.getDate());if(t<now)t=new Date(now.getFullYear()+1,s.getMonth(),s.getDate());return{days:Math.round((t-now)/DAY),years:t.getFullYear()-s.getFullYear(),date:t}}
+function tenureTxt(s){const n=today();if(s>n)return 'starts '+fmtShort(s);let y=n.getFullYear()-s.getFullYear();if(n<new Date(n.getFullYear(),s.getMonth(),s.getDate()))y--;
+ if(y<1){const m=(n.getFullYear()-s.getFullYear())*12+n.getMonth()-s.getMonth()-(n.getDate()<s.getDate()?1:0);return m<1?'new hire':m+' mo'}return y+' yr'+(y===1?'':'s')}
+function workFacts(p){const s=parseD(p.started),now=today();if(!s||s>now)return [];const na=nextAnniv(s,now),out=[];
+ if(na.days===0)out.push(`${na.years}-year work anniversary today!`);
+ else if(MILES.includes(na.years))out.push(`${na.years}-year work anniversary in ${na.days} day${na.days===1?'':'s'}. Milestone gift!`);
+ else out.push(`Work anniversary #${na.years} on ${fmtShort(na.date)}`);
+ out.push(`With you since ${fmtLong(s)}`);return out}
 function facts(p){const out=[],a=ageOf(p),b=parseD(p.birthday),now=today();
  if(b&&b<=now){const days=Math.round((now-b)/DAY);const nb=nextBday(b,now);
   out.push(nb.days===0?`It’s their birthday today, turning ${nb.turning}!`:`Turns ${nb.turning} in ${nb.days} day${nb.days===1?'':'s'}`);
@@ -358,12 +390,13 @@ function facts(p){const out=[],a=ageOf(p),b=parseD(p.birthday),now=today();
  }
  if(a!==null)out.splice(b?2:0,0,stage(a));
  if(!b&&a!==null&&[13,16,18,21,30,40,50,60,70,80,90].includes(a+1))out.push(`Turning ${a+1} next birthday. A big one!`);
+ const w=workFacts(p);if(w.length){const na=nextAnniv(parseD(p.started),now);if(MILES.includes(na.years)&&na.days<=120)out.unshift(w[0]);else out.push(w[0]);out.push(w[1])}
  return out}
 
 // ---------- gift helpers ----------
 const ppl=()=>Object.values(state.people);
 const giftsY=(p,y)=>(p.gifts||[]).filter(g=>g.year===y);
-const hol=(p,y)=>giftsY(p,y).filter(g=>g.occasion!=='birthday');
+const hol=(p,y)=>giftsY(p,y).filter(g=>(g.occasion||'holiday')==='holiday');
 const isDone=(p,y)=>{const h=hol(p,y);return h.length>0&&h.every(g=>g.got)};
 function normUrl(u){u=(u||'').trim();if(!u)return '';if(!/^https?:\/\//i.test(u))u='https://'+u;try{const x=new URL(u);return /^https?:$/.test(x.protocol)&&x.hostname.includes('.')?x.href:''}catch(e){return ''}}
 const isUrl=s=>/^(https?:\/\/|www\.)\S+$/i.test(s.trim())||/^[a-z0-9-]+(\.[a-z0-9-]+)+\/\S*$/i.test(s.trim());
@@ -403,15 +436,18 @@ function renderSum(){const Y=state.year;let tot=0,got=0,spent=0,planned=0,bspent
  <div class="blk"><h2 class="ol bl">Spent so far</h2><div class="lbl">Holidays ${Y}</div><div class="big"><b>${money(spent)}</b><span>${budget?' of '+money(budget):''}</span></div>
  <div class="bar m ${over?'over':''}" role="progressbar" aria-label="Budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(bp)}"><i style="width:${bp}%"></i></div>
  <p class="sub">${over?`<b style="color:var(--red)">${money(spent-budget)} over budget</b> · `:budget?`${money(budget-spent)} left · `:''}${planned?`${money(planned)} planned · `:''}<button class="lnk" data-act="budget">${budget?'Edit budget':'Set a budget'}</button>${bspent?` · ${money(bspent)} on birthdays`:''}</p></div>`}
-function renderBd(){const now=today();const up=ppl().filter(p=>parseD(p.birthday)).map(p=>Object.assign({p},nextBday(parseD(p.birthday),now))).filter(x=>x.days<=60).sort((a,b)=>a.days-b.days).slice(0,4);
- $('#bd').innerHTML=up.length?`<div class="bdays"><span>${I.cake} Birthdays coming up!</span>${up.map(x=>`<button class="bd" data-act="jump" data-p="${x.p.id}">${esc(x.p.name)} turns ${x.turning} · ${x.days===0?'today!':x.days===1?'tomorrow':'in '+x.days+' days'}</button>`).join('')}</div>`:''}
+function renderBd(){const now=today();
+ const an=ppl().filter(p=>parseD(p.started)&&parseD(p.started)<=now).map(p=>Object.assign({p},nextAnniv(parseD(p.started),now))).filter(x=>MILES.includes(x.years)&&x.days<=90).sort((a,b)=>a.days-b.days).slice(0,6);
+ const anH=an.length?`<div class="bdays"><span>${I.work} Work milestones coming up!</span>${an.map(x=>`<button class="bd ms" data-act="jump" data-p="${x.p.id}">${esc(x.p.name)} · ${x.years} yr · ${x.days===0?'today!':x.days===1?'tomorrow':'in '+x.days+' days'}</button>`).join('')}</div>`:'';
+ const up=ppl().filter(p=>parseD(p.birthday)).map(p=>Object.assign({p},nextBday(parseD(p.birthday),now))).filter(x=>x.days<=60).sort((a,b)=>a.days-b.days).slice(0,4);
+ $('#bd').innerHTML=up.length?`<div class="bdays"><span>${I.cake} Birthdays coming up!</span>${up.map(x=>`<button class="bd" data-act="jump" data-p="${x.p.id}">${esc(x.p.name)} turns ${x.turning} · ${x.days===0?'today!':x.days===1?'tomorrow':'in '+x.days+' days'}</button>`).join('')}</div>`:'';$('#bd').innerHTML+=anH}
 function renderChips(){const all=ppl(),c=g=>all.filter(p=>p.group===g).length,need=all.filter(p=>!isDone(p,state.year)).length,smp=all.some(p=>p.sample);
  $('#chips').innerHTML=[['all','Everyone',all.length],...groups().map(g=>[g.id,g.label,c(g.id)])].map(([v,l,n])=>`<button class="chip ${state.group===v?'on':''}" data-act="grp" data-v="${esc(v)}" aria-pressed="${state.group===v}">${esc(l)}<small>${n}</small></button>`).join('')
  +`<button class="chip need ${state.need?'on':''}" data-act="need" aria-pressed="${state.need}">Still shopping<small>${need}</small></button>`
  +(state.group!=='all'&&c(state.group)?`<button class="chip ghost" data-act="ggift">${I.plus} Gift for all ${esc(gLabel(state.group))}</button>`:'')
  +`<button class="chip ghost" data-act="bulk">${I.plus} Add a team</button><button class="chip ghost" data-act="groups">${I.pencil} Groups</button>`+(smp?`<button class="lnk" data-act="rmsample" style="color:var(--red)">Remove sample people</button>`:'')}
 function giftRow(p,g){return `<li class="g ${g.got?'got':''}"><button class="ck" data-act="tog" data-p="${p.id}" data-g="${g.id}" aria-pressed="${!!g.got}" aria-label="${g.got?'Gotten':'Not gotten yet'}: ${esc(g.name)}"><span>${I.check}</span></button>
- <button class="gn" data-act="gedit" data-p="${p.id}" data-g="${g.id}">${esc(g.name)}${g.occasion==='birthday'?`<em title="Birthday gift">${I.cake}</em>`:''}</button>
+ <button class="gn" data-act="gedit" data-p="${p.id}" data-g="${g.id}">${esc(g.name)}${g.occasion==='birthday'?`<em title="Birthday gift">${I.cake}</em>`:g.occasion==='anniversary'?`<em title="Work anniversary gift">${I.work}</em>`:''}</button>
  ${g.url?`<a class="glk" href="${esc(g.url)}" target="_blank" rel="noopener" aria-label="Open link for ${esc(g.name)}">${I.link}</a>`:'<span></span>'}<span class="pr">${g.price?money(g.price):''}</span></li>`}
 function card(p){const Y=state.year,a=ageOf(p),f=facts(p),fi=(factIdx[p.id]||0)%Math.max(f.length,1),gy=giftsY(p,Y),done=isDone(p,Y),b=parseD(p.birthday);
  const sp=gy.filter(g=>g.got).reduce((s,g)=>s+(+g.price||0),0),bud=+p.budget||0;
@@ -420,7 +456,7 @@ function card(p){const Y=state.year,a=ageOf(p),f=facts(p),fi=(factIdx[p.id]||0)%
  return `<article class="card ${done?'done':''}" id="c-${p.id}">
  ${done?`<div class="stamp ${state.pop===p.id?'pop':''}">${I.check} Got it!</div>`:''}
  <header class="ch"><div class="av" style="--t:${gColor(p.group)}">${photo}</div><div class="who"><h3>${esc(p.name)}</h3>
- <div class="meta"><span class="pill" style="--t:${gColor(p.group)}">${esc(gLabel(p.group))}</span>${a!==null?`<span>Age ${a}</span>`:''}${b?`<span>${I.cake} ${fmtShort(b)}</span>`:''}${p.sample?'<span class="pill smp">Sample</span>':''}</div></div>
+ <div class="meta"><span class="pill" style="--t:${gColor(p.group)}">${esc(gLabel(p.group))}</span>${a!==null?`<span>Age ${a}</span>`:''}${b?`<span>${I.cake} ${fmtShort(b)}</span>`:''}${parseD(p.started)?`<span>${I.work} ${tenureTxt(parseD(p.started))}</span>`:''}${p.sample?'<span class="pill smp">Sample</span>':''}</div></div>
  <button class="ib" data-act="edit" data-p="${p.id}" aria-label="Edit ${esc(p.name)}">${I.pencil}</button></header>
  ${f.length?`<button class="fact" data-act="fact" data-p="${p.id}">${I.spark}<span>${esc(f[fi])}</span>${f.length>1?'<small>tap for more</small>':''}</button>`:''}
  ${(p.links||[]).length?`<div class="links">${p.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${I.link} ${esc(linkLabel(l.url))} list</a>`).join('')}</div>`:''}
@@ -438,17 +474,32 @@ function shopHtml(list){const Y=state.year;let n=0,sum=0;const sec=[],noIdea=[];
  <div class="sbtns"><button class="chip ${state.showGot?'on':''}" data-act="showgot" aria-pressed="${state.showGot}">Show gotten</button><button class="chip" data-act="tagsall">${I.tag} Tags for everyone</button></div></div>
  ${sec.join('')||'<p class="empty">No gift ideas to shop for yet. Add ideas on the People view.</p>'}
  ${noIdea.length?`<div class="noidea"><b>Still need an idea:</b> ${noIdea.map(p=>`<button class="bd" data-act="jump" data-p="${p.id}">${esc(p.name)}</button>`).join('')}</div>`:''}</div>`}
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function calHtml(list){const now=today(),m0=now.getMonth(),y0=now.getFullYear();
+ const staffG=new Set(['pg','auragami','home',...ppl().filter(p=>p.started).map(p=>p.group)]);
+ const mos=[];for(let i=0;i<12;i++){const m=(m0+i)%12,y=y0+(m0+i>11?1:0);
+  const bd=list.filter(p=>{const b=parseD(p.birthday);return b&&b.getMonth()===m}).sort((a,b)=>parseD(a.birthday).getDate()-parseD(b.birthday).getDate());
+  const an=list.map(p=>{const s=parseD(p.started);return s&&s.getMonth()===m&&y-s.getFullYear()>=1?{p,s,yrs:y-s.getFullYear()}:null}).filter(Boolean).sort((a,b)=>a.s.getDate()-b.s.getDate());
+  mos.push(`<section class="mo ${i===0?'now':''}"><header><b>${MONTHS[m]}</b><small>${y}${i===0?' · this month':''}</small></header>
+  <div class="mrow"><span class="mt">${I.cake} Birthday lunch${bd.length?` · ${bd.length}`:''}</span>${bd.length?bd.map(p=>`<button class="bd" data-act="jump" data-p="${p.id}">${esc(p.name)} · ${parseD(p.birthday).getDate()}</button>`).join(''):'<span class="none">No birthdays</span>'}</div>
+  ${an.length?`<div class="mrow"><span class="mt">${I.work} Work anniversaries</span>${an.map(x=>`<button class="bd ${MILES.includes(x.yrs)?'ms':'an'}" data-act="jump" data-p="${x.p.id}">${esc(x.p.name)} · ${x.yrs} yr${MILES.includes(x.yrs)?' ★':''}</button>`).join('')}</div>`:''}</section>`)}
+ const miss=list.filter(p=>!p.birthday||(staffG.has(p.group)&&!p.started));
+ return `<div class="shop"><div class="shead"><div><h2 class="ol co">Calendar</h2><p>Monthly birthday lunches and work anniversaries. ★ marks 1, 5 and 10+ year milestones.</p></div></div>
+ ${miss.length?`<details class="miss" open><summary><b>Missing dates</b> · ${miss.length} ${miss.length===1?'person':'people'}</summary><p class="hint">Pick a date and it saves right away.</p>
+ <div class="qt"><div class="qh"><span>Name</span><span>Birthday</span><span>Start date</span></div>${miss.map(p=>`<div class="qr"><span>${esc(p.name)}</span><label><small>Birthday</small><input type="date" class="qd" data-p="${p.id}" data-k="birthday" value="${esc(p.birthday||'')}" aria-label="Birthday for ${esc(p.name)}"></label>${staffG.has(p.group)?`<label><small>Start date</small><input type="date" class="qd" data-p="${p.id}" data-k="started" value="${esc(p.started||'')}" aria-label="Start date for ${esc(p.name)}"></label>`:'<span></span>'}</div>`).join('')}</div></details>`:''}
+ <div class="months">${mos.join('')}</div></div>`}
 function renderGrid(){const ae=document.activeElement,keep=ae&&ae.closest&&ae.closest('.addg')?{p:ae.closest('.addg').dataset.p,name:ae.name,vals:[...ae.closest('.addg').querySelectorAll('input')].map(i=>i.value)}:null;
  const all=ppl();
  if(!all.length){$('#grid').innerHTML=`<div class="hello"><div class="row">${['gift','tree','gingerbread','ornament','candy'].map(icon).join('')}</div><h2 class="ol pk">Who’s on your list?</h2><p>Add your teams in one go, then family and friends one by one. Drop in gift ideas and wishlist links, tap the circle when a gift is handled, and watch the tally climb.</p><div class="btns"><button class="cta" data-act="bulk">${I.plus} Add a whole team</button><button class="cta" data-act="add" style="background:var(--sky)">${I.plus} Add one person</button><button class="lnk" data-act="sample">Try it with sample people</button></div></div>`;return}
- let list=all.filter(p=>(state.group==='all'||p.group===state.group)&&(state.view==='shop'||!state.need||!isDone(p,state.year))&&(!state.q||(p.name+' '+(p.notes||'')).toLowerCase().includes(state.q)));
+ let list=all.filter(p=>(state.group==='all'||p.group===state.group)&&(state.view!=='cards'||!state.need||!isDone(p,state.year))&&(!state.q||(p.name+' '+(p.notes||'')).toLowerCase().includes(state.q)));
  list.sort((a,b)=>(gOrder(a.group)-gOrder(b.group))||a.name.localeCompare(b.name));
  if(state.view==='shop'){$('#grid').innerHTML=shopHtml(list);state.pop=null;return}
+ if(state.view==='cal'){$('#grid').innerHTML=calHtml(list);return}
  $('#grid').innerHTML=list.map(card).join('')||`<div class="hello"><h2>${state.need?'Everyone here is all set!':'Nobody here yet'}</h2><p>${state.need?'Every person in this view has all their gifts.':'Try another group, or add someone new.'}</p></div>`;
  state.pop=null;
  if(keep){const f=document.querySelector(`.addg[data-p="${keep.p}"]`);if(f){const ins=f.querySelectorAll('input');ins.forEach((i,k)=>i.value=keep.vals[k]||'');const t=f.querySelector(`[name="${keep.name}"]`);if(t)t.focus()}}}
 function renderVt(){const n=ppl().reduce((s,p)=>s+giftsY(p,state.year).filter(g=>!g.got).length,0);
- $('#vt').innerHTML=`<button class="${state.view==='cards'?'on':''}" data-act="view" data-v="cards" aria-pressed="${state.view==='cards'}">People</button><button class="${state.view==='shop'?'on':''}" data-act="view" data-v="shop" aria-pressed="${state.view==='shop'}">Shopping list<small>${n}</small></button>`}
+ $('#vt').innerHTML=`<button class="${state.view==='cards'?'on':''}" data-act="view" data-v="cards" aria-pressed="${state.view==='cards'}">People</button><button class="${state.view==='shop'?'on':''}" data-act="view" data-v="shop" aria-pressed="${state.view==='shop'}">Shopping<small>${n}</small></button><button class="${state.view==='cal'?'on':''}" data-act="view" data-v="cal" aria-pressed="${state.view==='cal'}">Calendar</button>`}
 function render(){renderVt();renderHd();renderSum();renderBd();renderChips();renderGrid()}
 
 // ---------- modals ----------
@@ -463,6 +514,7 @@ function editorHtml(){const p=draft,isNew=!state.people[p.id],cur=p.icon||DEFICO
  ${state.newGrp?`<div class="lr"><input id="ng" placeholder="Vendors, Neighbors, Clients…" aria-label="New group name" autocomplete="off"><button type="button" class="ib" data-act="grpadd" aria-label="Add group">${I.check}</button></div>`:''}</div>
  <div class="two"><label class="f"><span>Birthday</span><input type="date" id="fb" value="${esc(p.birthday||'')}"></label><label class="f"><span>Age</span><input id="fa" inputmode="numeric" value="${p.birthday?'':(a===null?'':a)}" placeholder="${p.birthday&&a!==null?a+' (from birthday)':'or just the age'}" ${p.birthday?'disabled':''}></label></div>
  <p class="hint">With a birthday, the age updates itself and you get countdowns and fun facts. Just the age works too; it ticks up each year.</p>
+ <label class="f"><span>Work start date (staff)</span><input type="date" id="fs" value="${esc(p.started||'')}"></label>
  <div class="f"><span>Icon</span><div class="icons">${Object.keys(ICONS).map(n=>`<button type="button" class="ic ${cur===n?'on':''}" data-act="icset" data-v="${n}" aria-label="${n}" aria-pressed="${cur===n}">${icon(n)}</button>`).join('')}</div></div>
  <div class="f"><span>Wishlists &amp; gift lists</span><div id="lk">${(p.links||[]).map((l,i)=>`<div class="lr"><input class="lu" type="url" inputmode="url" value="${esc(l.url)}" placeholder="Paste a list link (Amazon, Target, Etsy…)" aria-label="List link"><button type="button" class="ib" data-act="lkrm" data-v="${i}" aria-label="Remove link">${I.x}</button></div>`).join('')}</div>
  <div><button type="button" class="lnk" data-act="lkadd">${I.plus} Add a list link</button></div></div>
@@ -470,7 +522,7 @@ function editorHtml(){const p=draft,isNew=!state.people[p.id],cur=p.icon||DEFICO
  <label class="f"><span>Budget for this person (optional)</span><input id="fbu" inputmode="decimal" placeholder="$" value="${p.budget?esc(p.budget):''}"></label>
  <div class="acts">${isNew?'':'<button type="button" class="del" data-act="pdel">Remove person</button>'}<button type="button" class="cta" data-act="psave">${isNew?'Add to list':'Save'}</button></div></div>`}
 function syncDraft(){if(!draft)return;const v=id=>{const e=$('#'+id);return e?e.value:''};
- draft.name=v('fn').trim();draft.birthday=v('fb');draft.notes=v('fno').trim();draft.budget=parseMoney(v('fbu'))||'';
+ draft.name=v('fn').trim();draft.birthday=v('fb');draft.started=v('fs');draft.notes=v('fno').trim();draft.budget=parseMoney(v('fbu'))||'';
  const fa=v('fa').trim();if(!draft.birthday&&fa!==''&&!isNaN(+fa)){draft.age=Math.max(0,Math.round(+fa));draft.ageYear=THISYEAR}else if(!draft.birthday&&fa===''){draft.age=null}
  draft.links=[...document.querySelectorAll('#lk .lu')].map(i=>({url:i.value}))}
 function openEditor(id){state.newGrp=false;draft=id?clone(state.people[id]):{id:'p_'+uid(),type:'person',name:'',group:state.group!=='all'?state.group:groups()[0].id,birthday:'',age:null,ageYear:THISYEAR,icon:'',photo:'',links:[],notes:'',budget:'',gifts:[],created:Date.now()};openModal(editorHtml())}
@@ -486,7 +538,7 @@ function giftEditor(pid,gid){const p=state.people[pid],g=(p.gifts||[]).find(x=>x
  <label class="f"><span>Gift</span><input id="gn" value="${esc(g.name)}"></label>
  <div class="two"><label class="f"><span>Price</span><input id="gp" inputmode="decimal" value="${g.price?esc(g.price):''}" placeholder="$"></label><label class="f"><span>Year</span><input id="gy" inputmode="numeric" value="${g.year}"></label></div>
  <label class="f"><span>Link</span><input id="gu" type="url" inputmode="url" value="${esc(g.url||'')}" placeholder="Where to buy it"></label>
- <div class="f"><span>For</span><div class="seg"><button type="button" class="${g.occasion!=='birthday'?'on':''}" data-act="occ" data-v="holiday">Holidays</button><button type="button" class="${g.occasion==='birthday'?'on':''}" data-act="occ" data-v="birthday">Birthday</button></div></div>
+ <div class="f"><span>For</span><div class="seg"><button type="button" class="${(g.occasion||'holiday')==='holiday'?'on':''}" data-act="occ" data-v="holiday">Holidays</button><button type="button" class="${g.occasion==='birthday'?'on':''}" data-act="occ" data-v="birthday">Birthday</button><button type="button" class="${g.occasion==='anniversary'?'on':''}" data-act="occ" data-v="anniversary">Anniversary</button></div></div>
  <label class="chk"><input type="checkbox" id="gg" ${g.got?'checked':''}> Got it!</label>
  <div><button type="button" class="lnk" data-act="tag" data-p="${pid}">${I.tag} Make a gift tag for ${esc(p.name)}</button></div>
  <div class="acts"><button type="button" class="del" data-act="gdel">Delete gift</button><button type="button" class="cta" data-act="gsave">Save</button></div></div>`)}
@@ -611,6 +663,7 @@ function backupHtml(){const data=JSON.stringify({app:'presently',v:1,exported:ne
  <div class="f"><span>Your data (${n} ${n===1?'person':'people'})</span><textarea class="bk" id="bkout" readonly>${esc(data)}</textarea></div>
  <div><button type="button" class="btn2" data-act="bkcopy">${I.download} Copy my data</button></div>
  <div class="f"><span>Import</span><textarea class="bk" id="bkin" placeholder="Paste data copied from Presently"></textarea></div>
+ <div><label class="btn2" for="bkfile">${I.download} Choose a file</label><input type="file" id="bkfile" accept=".json,application/json,text/plain" hidden></div>
  <p class="hint">Importing adds people and updates anyone with the same record. Nobody already here is removed.</p>
  <div class="acts"><button type="button" class="cta" data-act="bkimport">Import</button></div></div>`}
 function doImport(){let d;try{d=JSON.parse($('#bkin').value)}catch(e){$('#bkin').classList.add('bad');toast('That doesn’t look like Presently data');return}
@@ -678,7 +731,9 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
  case 'undo':if(undoFn){const f=undoFn;undoFn=null;f();$('#toast').classList.remove('on')}break;
  }});
 document.addEventListener('submit',e=>{e.preventDefault();const f=e.target;if(f.classList.contains('addg'))addGift(f.dataset.p,f)});
-document.addEventListener('change',async e=>{if(e.target.id==='ph'&&e.target.files[0]){try{const d=await readPhoto(e.target.files[0]);syncDraft();draft.photo=d;reEditor()}catch(err){toast('That photo couldn’t be read. Try a JPG or PNG')}}
+document.addEventListener('change',async e=>{if(e.target.classList&&e.target.classList.contains('qd')){const p=state.people[e.target.dataset.p];if(p){p[e.target.dataset.k]=e.target.value;if(e.target.dataset.k==='birthday'&&e.target.value)p.age=null;put(p.id,p);renderBd();toast(`Saved for ${p.name}`)}return}
+ if(e.target.id==='bkfile'&&e.target.files[0]){e.target.files[0].text().then(t=>{$('#bkin').value=t;toast('File loaded. Tap Import')});return}
+ if(e.target.id==='ph'&&e.target.files[0]){try{const d=await readPhoto(e.target.files[0]);syncDraft();draft.photo=d;reEditor()}catch(err){toast('That photo couldn’t be read. Try a JPG or PNG')}}
  if(e.target.id==='fb'){const a=$('#fa');if(a){a.disabled=!!e.target.value;if(e.target.value){a.value='';const t=ageOf({birthday:e.target.value});a.placeholder=(t===null?'':t+' (from birthday)')}else a.placeholder='or just the age'}}});
 $('#modal').addEventListener('click',e=>{if(e.target.classList.contains('ov'))closeModal()});
 document.addEventListener('input',e=>{const id=e.target.id;if(tagD&&(id==='tto'||id==='tfrom'||id==='tgreet')){if(id==='tfrom')tagD.from=e.target.value;if(id==='tgreet')tagD.greet=e.target.value;clearTimeout(tagTimer);tagTimer=setTimeout(drawPreview,250)}});

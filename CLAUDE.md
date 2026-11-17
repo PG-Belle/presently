@@ -31,18 +31,22 @@ One Firestore doc per person plus one `settings` doc, under `users/<uid>/items/`
 
 ```js
 // person
-{ type:'person', id:'p_x', name, group:'pg', birthday:'YYYY-MM-DD'|'', age:null|n, ageYear,
+{ type:'person', id:'p_x', name, group:'pg', birthday:'YYYY-MM-DD'|'', started:'YYYY-MM-DD'|'' /* work start */, age:null|n, ageYear,
   icon:'', photo:'' /* small jpeg data URL */, links:[{url}], notes, budget:''|n,
-  gifts:[{ id, name, price, url, got, year, occasion:'holiday'|'birthday' }] }
+  gifts:[{ id, name, price, url, got, year, occasion:'holiday'|'birthday'|'anniversary' }] }
 // settings
 { budgets:{ '2026':1500 }, groups:[{id,label,color}], from, greet, tagStyle:'burst'|'eye'|'spark' }
 ```
 
-Default groups: ProductsGo (`pg`), Auragami, Home, Family, Friends. Holiday progress counts only non-birthday gifts in the selected year; "spent" sums prices of gifts marked got.
+Default groups: ProductsGo (`pg`), Auragami, Home, Family, Friends. Holiday progress counts only holiday gifts (birthday and anniversary gifts are tracked but not counted) in the selected year; "spent" sums prices of gifts marked got.
 
 ## Features (keep working when changing things)
 
-People with photo or icon, birthday or age (age ticks up yearly), wishlist links, notes, per-person budget. Groups with filter chips and a Groups editor. "Add a team" (paste many names into a group, optional same gift for each). "Gift for all <group>" (one gift added to everyone in the filtered group, with Undo). Gifts with got-it circles and a "Got it!" sticker. Past years per card. Summary boards with year switcher, budget bar, Christmas countdown. Birthdays-coming-up chips and tap-to-cycle fun facts. Shopping list view. Gift tags (canvas preview, 10 per letter page PDF via jsPDF). Search. Sample people. Backup / import (JSON copy and paste). Undo toasts.
+People with photo or icon, birthday or age (age ticks up yearly), wishlist links, notes, per-person budget. Groups with filter chips and a Groups editor. "Add a team" (paste many names into a group, optional same gift for each). "Gift for all <group>" (one gift added to everyone in the filtered group, with Undo). Gifts with got-it circles and a "Got it!" sticker. Past years per card. Summary boards with year switcher, budget bar, Christmas countdown. Birthdays-coming-up and work-milestone (1, 5, 10, 15+ yr) chips, tenure on cards, tap-to-cycle fun facts. Calendar view: 12 months of birthday lunches and work anniversaries, plus a Missing dates table that saves on change. Shopping list view. Gift tags (canvas preview, 10 per letter page PDF via jsPDF). Search. Sample people. Backup / import (JSON copy and paste, or choose a .json file). Undo toasts.
+
+## Staff gifting
+
+PG staff each get four holiday items: Book, Library card holder + card, Cash bonus (cash goes inside the book with the card), Small gift to open. Work anniversary gifts at 1, 5 and 10 years. Monthly birthday lunches. Staff data lives in Firestore, never in this repo.
 
 ## Design
 
