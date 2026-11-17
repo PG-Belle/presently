@@ -31,7 +31,7 @@ One Firestore doc per person plus one `settings` doc, under `users/<uid>/items/`
 
 ```js
 // person
-{ type:'person', id:'p_x', name, group:'pg', birthday:'YYYY-MM-DD'|'', started:'YYYY-MM-DD'|'' /* work start */, age:null|n, ageYear,
+{ type:'person', id:'p_x', name, group:'pg', birthday:'YYYY-MM-DD'|'--MM-DD' /* no year */|'', started:'YYYY-MM-DD'|'' /* work start */, age:null|n, ageYear,
   icon:'', photo:'' /* small jpeg data URL */, links:[{url}], notes, budget:''|n,
   gifts:[{ id, name, price, url, got, year, occasion:'holiday'|'birthday'|'anniversary' }] }
 // settings

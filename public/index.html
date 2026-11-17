@@ -347,11 +347,11 @@ async function pump(id){const e=wq[id];e.busy=true;while(e.next!==undefined){con
 function setSync(t){$('#sync').textContent=t}
 
 // ---------- date + age helpers ----------
-const parseD=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?new Date(+m[1],m[2]-1,+m[3]):null};
+const parseD=s=>{let m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');if(m)return new Date(+m[1],m[2]-1,+m[3]);m=/^--(\d{2})-(\d{2})$/.exec(s||'');if(m){const d=new Date(1904,m[1]-1,+m[2]);d.noYear=true;return d}return null};
 const fmtShort=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 const fmtLong=d=>d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
 function nextBday(b,now){let t=new Date(now.getFullYear(),b.getMonth(),b.getDate());if(t<now)t=new Date(now.getFullYear()+1,b.getMonth(),b.getDate());return{days:Math.round((t-now)/DAY),turning:t.getFullYear()-b.getFullYear(),date:t}}
-function ageOf(p){const b=parseD(p.birthday);if(b){const n=today();let a=n.getFullYear()-b.getFullYear();if(n<new Date(n.getFullYear(),b.getMonth(),b.getDate()))a--;return Math.max(0,a)}
+function ageOf(p){const b=parseD(p.birthday);if(b&&!b.noYear){const n=today();let a=n.getFullYear()-b.getFullYear();if(n<new Date(n.getFullYear(),b.getMonth(),b.getDate()))a--;return Math.max(0,a)}
  if(p.age===null||p.age===undefined||p.age==='')return null;return +p.age+(THISYEAR-(p.ageYear||THISYEAR))}
 const SIGNS=['Aquarius','Pisces','Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn'];
 const SSTART=[20,19,21,20,21,21,23,23,23,23,22,22];
@@ -379,7 +379,8 @@ function workFacts(p){const s=parseD(p.started),now=today();if(!s||s>now)return 
  else out.push(`Work anniversary #${na.years} on ${fmtShort(na.date)}`);
  out.push(`With you since ${fmtLong(s)}`);return out}
 function facts(p){const out=[],a=ageOf(p),b=parseD(p.birthday),now=today();
- if(b&&b<=now){const days=Math.round((now-b)/DAY);const nb=nextBday(b,now);
+ if(b&&b.noYear){const nb=nextBday(b,now);out.push(nb.days===0?'It’s their birthday today!':`Birthday in ${nb.days} day${nb.days===1?'':'s'}`);out.push(`A ${sign(b)} with ${STONES[b.getMonth()]} as a birthstone`)}
+ else if(b&&b<=now){const days=Math.round((now-b)/DAY);const nb=nextBday(b,now);
   out.push(nb.days===0?`It’s their birthday today, turning ${nb.turning}!`:`Turns ${nb.turning} in ${nb.days} day${nb.days===1?'':'s'}`);
   const xm=christmases(b,now);out.push(xm===0?'This is their very first Christmas!':`Has celebrated ${xm} Christmas${xm===1?'':'es'} so far`);
   out.push(`${days.toLocaleString()} days old today`);
@@ -440,7 +441,7 @@ function renderBd(){const now=today();
  const an=ppl().filter(p=>parseD(p.started)&&parseD(p.started)<=now).map(p=>Object.assign({p},nextAnniv(parseD(p.started),now))).filter(x=>MILES.includes(x.years)&&x.days<=90).sort((a,b)=>a.days-b.days).slice(0,6);
  const anH=an.length?`<div class="bdays"><span>${I.work} Work milestones coming up!</span>${an.map(x=>`<button class="bd ms" data-act="jump" data-p="${x.p.id}">${esc(x.p.name)} · ${x.years} yr · ${x.days===0?'today!':x.days===1?'tomorrow':'in '+x.days+' days'}</button>`).join('')}</div>`:'';
  const up=ppl().filter(p=>parseD(p.birthday)).map(p=>Object.assign({p},nextBday(parseD(p.birthday),now))).filter(x=>x.days<=60).sort((a,b)=>a.days-b.days).slice(0,4);
- $('#bd').innerHTML=up.length?`<div class="bdays"><span>${I.cake} Birthdays coming up!</span>${up.map(x=>`<button class="bd" data-act="jump" data-p="${x.p.id}">${esc(x.p.name)} turns ${x.turning} · ${x.days===0?'today!':x.days===1?'tomorrow':'in '+x.days+' days'}</button>`).join('')}</div>`:'';$('#bd').innerHTML+=anH}
+ $('#bd').innerHTML=up.length?`<div class="bdays"><span>${I.cake} Birthdays coming up!</span>${up.map(x=>`<button class="bd" data-act="jump" data-p="${x.p.id}">${esc(x.p.name)}${parseD(x.p.birthday).noYear?'':' turns '+x.turning} · ${x.days===0?'today!':x.days===1?'tomorrow':'in '+x.days+' days'}</button>`).join('')}</div>`:'';$('#bd').innerHTML+=anH}
 function renderChips(){const all=ppl(),c=g=>all.filter(p=>p.group===g).length,need=all.filter(p=>!isDone(p,state.year)).length,smp=all.some(p=>p.sample);
  $('#chips').innerHTML=[['all','Everyone',all.length],...groups().map(g=>[g.id,g.label,c(g.id)])].map(([v,l,n])=>`<button class="chip ${state.group===v?'on':''}" data-act="grp" data-v="${esc(v)}" aria-pressed="${state.group===v}">${esc(l)}<small>${n}</small></button>`).join('')
  +`<button class="chip need ${state.need?'on':''}" data-act="need" aria-pressed="${state.need}">Still shopping<small>${need}</small></button>`
@@ -513,6 +514,7 @@ function editorHtml(){const p=draft,isNew=!state.people[p.id],cur=p.icon||DEFICO
  <div class="f"><span>Group</span><div class="seg">${groups().map(g=>`<button type="button" class="${p.group===g.id?'on':''}" style="--t:${g.color}" data-act="grpset" data-v="${esc(g.id)}">${esc(g.label)}</button>`).join('')}<button type="button" class="newg" data-act="grpnew">${I.plus} New group</button></div>
  ${state.newGrp?`<div class="lr"><input id="ng" placeholder="Vendors, Neighbors, Clients…" aria-label="New group name" autocomplete="off"><button type="button" class="ib" data-act="grpadd" aria-label="Add group">${I.check}</button></div>`:''}</div>
  <div class="two"><label class="f"><span>Birthday</span><input type="date" id="fb" value="${esc(p.birthday||'')}"></label><label class="f"><span>Age</span><input id="fa" inputmode="numeric" value="${p.birthday?'':(a===null?'':a)}" placeholder="${p.birthday&&a!==null?a+' (from birthday)':'or just the age'}" ${p.birthday?'disabled':''}></label></div>
+ ${parseD(p.birthday)&&parseD(p.birthday).noYear?`<p class="hint">Birthday on file: <b>${fmtShort(parseD(p.birthday))}</b> (no year). Pick the full date above to add the year, or <button type="button" class="lnk" data-act="rmbd">remove it</button>.</p>`:''}
  <p class="hint">With a birthday, the age updates itself and you get countdowns and fun facts. Just the age works too; it ticks up each year.</p>
  <label class="f"><span>Work start date (staff)</span><input type="date" id="fs" value="${esc(p.started||'')}"></label>
  <div class="f"><span>Icon</span><div class="icons">${Object.keys(ICONS).map(n=>`<button type="button" class="ic ${cur===n?'on':''}" data-act="icset" data-v="${n}" aria-label="${n}" aria-pressed="${cur===n}">${icon(n)}</button>`).join('')}</div></div>
@@ -522,7 +524,7 @@ function editorHtml(){const p=draft,isNew=!state.people[p.id],cur=p.icon||DEFICO
  <label class="f"><span>Budget for this person (optional)</span><input id="fbu" inputmode="decimal" placeholder="$" value="${p.budget?esc(p.budget):''}"></label>
  <div class="acts">${isNew?'':'<button type="button" class="del" data-act="pdel">Remove person</button>'}<button type="button" class="cta" data-act="psave">${isNew?'Add to list':'Save'}</button></div></div>`}
 function syncDraft(){if(!draft)return;const v=id=>{const e=$('#'+id);return e?e.value:''};
- draft.name=v('fn').trim();draft.birthday=v('fb');draft.started=v('fs');draft.notes=v('fno').trim();draft.budget=parseMoney(v('fbu'))||'';
+ draft.name=v('fn').trim();draft.birthday=v('fb')||(/^--/.test(draft.birthday||'')?draft.birthday:'');draft.started=v('fs');draft.notes=v('fno').trim();draft.budget=parseMoney(v('fbu'))||'';
  const fa=v('fa').trim();if(!draft.birthday&&fa!==''&&!isNaN(+fa)){draft.age=Math.max(0,Math.round(+fa));draft.ageYear=THISYEAR}else if(!draft.birthday&&fa===''){draft.age=null}
  draft.links=[...document.querySelectorAll('#lk .lu')].map(i=>({url:i.value}))}
 function openEditor(id){state.newGrp=false;draft=id?clone(state.people[id]):{id:'p_'+uid(),type:'person',name:'',group:state.group!=='all'?state.group:groups()[0].id,birthday:'',age:null,ageYear:THISYEAR,icon:'',photo:'',links:[],notes:'',budget:'',gifts:[],created:Date.now()};openModal(editorHtml())}
@@ -716,6 +718,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
  case 'rmsample':{const gone=ppl().filter(p=>p.sample);gone.forEach(p=>{delete state.people[p.id];put(p.id,null)});render();toast('Sample people removed',()=>{gone.forEach(p=>{state.people[p.id]=p;put(p.id,p)});render()});break}
  case 'grpset':syncDraft();draft.group=v;reEditor();break;
  case 'icset':syncDraft();draft.icon=v;draft.photo='';reEditor();break;
+ case 'rmbd':syncDraft();draft.birthday='';reEditor();break;
  case 'rmphoto':syncDraft();draft.photo='';reEditor();break;
  case 'lkadd':syncDraft();draft.links.push({url:''});reEditor();{const l=document.querySelectorAll('#lk .lu');if(l.length)l[l.length-1].focus()}break;
  case 'lkrm':syncDraft();draft.links.splice(+v,1);reEditor();break;
