@@ -13,6 +13,7 @@
 // Plan format (every part optional):
 //   { "people":  [{ "id":"p_x", "set":{ "birthday":"--09-28", "started":"2018-08-29" } }],
 //     "add":     [{ "name":"Moses Badran", "group":"pg", "birthday":"--11-02", "started":"2026-09-22" }],
+//     "remove":  ["p_x"],
 //     "wishlist":{ "key":"<kidKey>", "add":[{ "name":"Mousepad", "star":1, "tier":1, "url":"",
 //                                             "given":2026, "claimBy":"Belle" }] } }
 // Only these docs can be touched: users/<uid>/items/*, wishlists/*, families/*.
@@ -77,6 +78,12 @@ async function build(plan) {
       icon: '', photo: '', links: [], notes: '', budget: '', gifts: [], created: Date.now(), ...a};
     writes.push({ref: db.doc(`users/${u}/items/${id}`), before: null, after: p});
     notes.push(`add ${a.name} to ${a.group}${a.birthday ? ', birthday ' + a.birthday : ''}${a.started ? ', started ' + a.started : ''}`);
+  }
+  for (const id of plan.remove || []) {
+    const ref = db.doc(`users/${u}/items/${id}`); const snap = await ref.get();
+    if (!snap.exists || snap.get('type') !== 'person') die(`No person ${id}`);
+    writes.push({ref, before: snap.data(), after: null});
+    notes.push(`remove ${snap.get('name')} (${snap.get('group')}, ${(snap.get('gifts') || []).length} gifts)`);
   }
   if (plan.wishlist) {
     const {key, add = []} = plan.wishlist;
