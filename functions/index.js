@@ -113,9 +113,9 @@ exports.findDeals = onCall(
       at: Date.now(),
       summary: clean(result.summary, 300),
       options: (result.options || [])
-        .filter((o) => /^https:\/\//.test(o.url || ''))
+        .filter((o) => /^https:\/\//.test(o.url || '') && o.url.length <= 2000)
         .slice(0, 3)
-        .map((o) => ({store: clean(o.store, 60), price: clean(o.price, 30), url: clean(o.url, 500), note: clean(o.note, 220)})),
+        .map((o) => ({store: clean(o.store, 60), price: clean(o.price, 30), url: o.url, note: clean(o.note, 220)})),
     };
     await famRef.update({[`research.${itemId}`]: saved});
     return saved;
