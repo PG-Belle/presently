@@ -78,7 +78,7 @@ exports.findDeals = onCall(
       'version most kids that age would want and say so in the summary. Then call save_options.',
     ].filter(Boolean).join('\n');
 
-    const client = new Anthropic({apiKey: ANTHROPIC_API_KEY.value()});
+    const client = new Anthropic({apiKey: ANTHROPIC_API_KEY.value().trim()});
     const messages = [{role: 'user', content: prompt}];
     let result = null;
     for (let turn = 0; turn < 4 && !result; turn++) {
