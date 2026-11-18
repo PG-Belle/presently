@@ -4,10 +4,11 @@
 // each list gets a daily cap so a shared link can't run up the bill.
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {defineSecret} = require('firebase-functions/params');
-const admin = require('firebase-admin');
+const {initializeApp} = require('firebase-admin/app');
+const {getFirestore} = require('firebase-admin/firestore');
 const Anthropic = require('@anthropic-ai/sdk');
 
-admin.initializeApp();
+initializeApp();
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 const DAILY_LIMIT = 15;
 const CACHE_MS = 7 * 24 * 3600 * 1000;
@@ -49,7 +50,7 @@ exports.findDeals = onCall(
     if (!/^[A-Za-z0-9]{16,40}$/.test(f || '') || !/^[a-z0-9]{4,30}$/.test(itemId || '')) {
       throw new HttpsError('invalid-argument', 'Bad link');
     }
-    const db = admin.firestore();
+    const db = getFirestore();
     const famRef = db.doc(`families/${f}`);
     const fam = await famRef.get();
     if (!fam.exists) throw new HttpsError('not-found', 'List not found');
