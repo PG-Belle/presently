@@ -17,14 +17,15 @@
 //     "wishlist":{ "key":"<kidKey>", "add":[{ "name":"Mousepad", "star":1, "tier":1, "url":"",
 //                                             "given":2026, "claimBy":"Belle" }],
 //                 "set":[{ "id":"<itemId>", "url":"https://..." }] } }
-// Only these docs can be touched: users/<uid>/items/*, wishlists/*, families/*.
+//     "slugs":   [{ "slug":"cole", "k":"<kidKey>" }],   (short link presently-gifts.web.app/cole)
+// Only these docs can be touched: users/<uid>/items/*, wishlists/*, families/*, slugs/*.
 const path = require('path');
 const fs = require('fs');
 const fromFunctions = (m) => require(require.resolve(m, {paths: [path.join(__dirname, '../functions')]}));
 fromFunctions('firebase-admin/app').initializeApp({projectId: 'presently-63110'});
 const db = fromFunctions('firebase-admin/firestore').getFirestore();
 const BACKUPS = path.join(__dirname, '../.backups');
-const PERSON_FIELDS = ['name', 'group', 'also', 'birthday', 'started', 'notes', 'budget', 'age', 'ageYear', 'icon', 'links', 'gifts'];
+const PERSON_FIELDS = ['wish', 'name', 'group', 'also', 'birthday', 'started', 'notes', 'budget', 'age', 'ageYear', 'icon', 'links', 'gifts'];
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const die = (m) => { console.error(m); process.exit(1); };
 const okDate = (k, v) => v === '' || (k === 'birthday' ? /^(\d{4}|-)-\d{2}-\d{2}$/ : /^\d{4}-\d{2}-\d{2}$/).test(v);
@@ -86,6 +87,14 @@ async function build(plan) {
     writes.push({ref, before: snap.data(), after: null});
     notes.push(`remove ${snap.get('name')} (${snap.get('group')}, ${(snap.get('gifts') || []).length} gifts)`);
   }
+  for (const {slug, k} of plan.slugs || []) {
+    if (!/^[a-z0-9]{1,30}$/.test(slug)) die(`Bad short name ${slug}`);
+    const ref = db.doc(`slugs/${slug}`); const snap = await ref.get();
+    if (snap.exists) die(`/${slug} is taken`);
+    if (!(await db.doc(`wishlists/${k}`).get()).exists) die(`No wishlist ${k}`);
+    writes.push({ref, before: null, after: {owner: u, k}});
+    notes.push(`short link /${slug} -> wishlist ${k.slice(0, 6)}…`);
+  }
   if (plan.wishlist) {
     const {key, add = [], set = []} = plan.wishlist;
     const wref = db.doc(`wishlists/${key}`); const w = await wref.get(); if (!w.exists) die('No wishlist with that key');
@@ -140,7 +149,7 @@ async function main() {
   }
   if (cmd === 'undo') {
     const saved = JSON.parse(fs.readFileSync(arg, 'utf8'));
-    if (!saved.every((s) => /^(users\/[^/]+\/items|wishlists|families)\/[^/]+$/.test(s.path))) die('Backup has paths outside Presently');
+    if (!saved.every((s) => /^(users\/[^/]+\/items|wishlists|families|slugs)\/[^/]+$/.test(s.path))) die('Backup has paths outside Presently');
     const writes = []; for (const s of saved) { const ref = db.doc(s.path); writes.push({ref, before: (await ref.get()).data() || null, after: s.before}); }
     saved.forEach((s) => console.log(`${s.before ? 'restore' : 'remove'} ${s.path}`));
     if (!yes) return console.log('\nPreview only. Add --yes to restore.');

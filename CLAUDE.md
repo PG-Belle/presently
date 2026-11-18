@@ -12,7 +12,7 @@ public/list.html           shareable kid wishlist page (?k=kid key, ?f=family ke
 functions/index.js         findDeals: Claude + web search finds where to buy a wishlist item (secret ANTHROPIC_API_KEY); linkInfo: reads a pasted link's page title
 public/manifest.webmanifest, icon-*.png, apple-touch-icon.png   add-to-home-screen bits
 firebase.json              hosting (serves public/) + Firestore rules
-firestore.rules            users/<uid>/items/* owner only; wishlists/* and families/* open by unguessable key, no listing
+firestore.rules            users/<uid>/items/* owner only; wishlists/* and families/* open by unguessable key, no listing; slugs/<name> maps short kid links like /cole to a kid key
 ```
 
 Keep it a single self-contained `index.html` with no bundler unless Belle asks otherwise. Firebase is loaded with the compat SDK from gstatic, and the project config comes from the Hosting reserved URL `/__/firebase/init.js`, so there is no config or API key in the repo.
@@ -41,7 +41,8 @@ One Firestore doc per person plus one `settings` doc, under `users/<uid>/items/`
 { owner:uid, kid:'Cole', items:[{ id, name, url, star:0|1|2, tier:0-3, added, by?, gotYear? }], updated }
 // families/<famKey>   (family link; never reachable from the kid link)
 { owner:uid, kidKey, kid, claims:{ <itemId>:{by,at} }, research:{ <itemId>:{name,at,summary,options} } /* function only */, quota }
-// a person with a wishlist has wish:{k,f}
+// slugs/<name>  { owner, k }   short kid link presently-gifts.web.app/<name>
+// a person with a wishlist has wish:{k,f,s?}  (s = short link name)
 // settings
 { budgets:{ '2026':1500 }, groups:[{id,label,color}], from, greet, tagStyle:'burst'|'eye'|'spark' }
 ```

@@ -121,8 +121,10 @@ let undoFn=null;
 function toast(msg,undo){const el=$('#toast');el.innerHTML=`<span>${esc(msg)}</span>${undo?'<button data-act="undo">Undo</button>':''}`;undoFn=undo||null;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>{el.classList.remove('on');undoFn=null},undo?6000:2400)}
 function fail(t,p){$('#app').innerHTML=`<div class="msg"><h2>${esc(t)}</h2><p>${esc(p)}</p></div>`}
 
-const q=new URLSearchParams(location.search),KK=q.get('k'),FK=q.get('f'),okKey=s=>/^[A-Za-z0-9]{16,40}$/.test(s||'');
-const mode=okKey(FK)?'fam':okKey(KK)?'kid':null;
+const q=new URLSearchParams(location.search),FK=q.get('f'),okKey=s=>/^[A-Za-z0-9]{16,40}$/.test(s||'');let KK=q.get('k');
+// Short kid links like /cole: the name is looked up in slugs/<name> to find the list key.
+const SLUG=((location.pathname.match(/^\/([A-Za-z0-9]{1,30})\/?$/)||[])[1]||'').toLowerCase();
+const mode=okKey(FK)?'fam':okKey(KK)||SLUG?'kid':null;
 // A link handed over by the iPhone Shortcut (#add=<link>) or the bookmark button (?add=<link>&t=<title>).
 const handed={u:urlIn(q.get('add')||(location.hash.match(/#add=(.+)$/)||[])[1]||''),t:cleanTitle(q.get('t')||'')};
 const st={wish:null,fam:null,tier:0,star:1,busy:{},me:'',auto:'',hint:'',look:0};
@@ -134,7 +136,7 @@ else start();
 
 function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=null;
  const go=k=>{wref=db.doc('wishlists/'+k);if(wunsub)wunsub();wunsub=wref.onSnapshot(s=>{if(!s.exists){fail('List not found','This wishlist may have been removed.');return}st.wish=s.data();render()},()=>fail('Can’t open this list','Check the link and try again.'))};
- if(mode==='kid')go(KK);
+ if(mode==='kid'){if(okKey(KK))go(KK);else db.doc('slugs/'+SLUG).get().then(s=>{const k=s.exists&&s.data().k;if(!okKey(k)){fail('List not found','Check the link and try again.');return}KK=k;go(k)},()=>fail('Can’t open this list','Check the link and try again.'))}
  else{fref=db.doc('families/'+FK);fref.onSnapshot(s=>{if(!s.exists){fail('List not found','This wishlist may have been removed.');return}st.fam=s.data();if(!wref)go(st.fam.kidKey);else render()},()=>fail('Can’t open this list','Check the link and try again.'))}
 
  // items are edited in a transaction so a kid and a family member editing at once don't overwrite each other
@@ -154,8 +156,8 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
    <div class="f"><span>How much do you want it?</span><div class="pick">${STARS.map((s,i)=>`<button type="button" class="${st.star===i?'on':''}" data-act="pstar" data-v="${i}" aria-pressed="${st.star===i}">${s} ${STARLBL[i]}</button>`).join('')}</div></div>
    <div class="f"><span>Price (a guess is fine)</span><div class="pick">${['?','$','$$','$$$'].map((s,i)=>`<button type="button" class="${st.tier===i?'on':''}" data-act="ptier" data-v="${i}" aria-pressed="${st.tier===i}">${i?s:'Not sure'}</button>`).join('')}</div></div>
    <button class="cta">${I.plus} Add to list</button></form>`;
-  const KP=mode==='kid'?'k='+KK:'f='+FK,base=location.origin+'/list.html?'+KP;
-  const bm=`javascript:(()=>{window.open('${base}&add='+encodeURIComponent(location.href)+'&t='+encodeURIComponent(document.title))})()`;
+  const KP=mode==='kid'?'k='+KK:'f='+FK,short=mode==='kid'&&SLUG&&!okKey(q.get('k')),base=short?location.origin+'/'+SLUG:location.origin+'/list.html?'+KP;
+  const bm=`javascript:(()=>{window.open('${base}${short?'?':'&'}add='+encodeURIComponent(location.href)+'&t='+encodeURIComponent(document.title))})()`;
   const how=`<details class="box got how"><summary>Add from any app</summary>
    <p><b>iPhone.</b> Set this up once. Then on any product, tap Share and pick <b>Add to my wishlist</b>.</p>
    <ol><li>Open the <b>Shortcuts</b> app and tap <b>+</b>.</li>
@@ -181,7 +183,7 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
   if(vals.en!=null&&$('#en'))$('#en').value=vals.en;if(vals.eu!=null&&$('#eu'))$('#eu').value=vals.eu;
   if(vals.n!=null)$('#n').value=vals.n;if(vals.u!=null)$('#u').value=vals.u;if(vals.me!=null&&$('#me'))$('#me').value=vals.me;
   if(keep&&$('#'+keep))$('#'+keep).focus();
-  if(handed.u){const h=Object.assign({},handed);handed.u='';history.replaceState(null,'',location.pathname+'?'+KP);
+  if(handed.u){const h=Object.assign({},handed);handed.u='';history.replaceState(null,'',short?location.pathname:location.pathname+'?'+KP);
    $('#u').value=h.u;if(h.t){$('#n').value=h.t;st.auto=h.t}else nameFor(h.u);$('#addf').scrollIntoView({block:'start'});toast('Pick the stars and price, then Add')}}
  st.render=render;
 

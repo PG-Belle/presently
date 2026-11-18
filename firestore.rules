@@ -38,5 +38,19 @@ service cloud.firestore {
         && request.resource.data.claims.size() <= 150;
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
+
+    // Short kid links: slugs/cole -> { k: <kid key> }. Anyone with the name can
+    // open that list (Belle chose plain names over unguessable ones). Only the
+    // list's owner can claim a name, and names can't be listed.
+    match /slugs/{slug} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && slug.matches('^[a-z0-9]{1,30}$')
+        && request.resource.data.keys().hasOnly(['owner', 'k'])
+        && request.resource.data.owner == request.auth.uid
+        && getAfter(/databases/$(database)/documents/wishlists/$(request.resource.data.k)).data.owner == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+    }
   }
 }

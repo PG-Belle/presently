@@ -625,7 +625,7 @@ function editorHtml(){const p=draft,isNew=!state.people[p.id],cur=p.icon||DEFICO
  <div class="f"><span>Wishlists &amp; gift lists</span><div id="lk">${(p.links||[]).map((l,i)=>`<div class="lr"><input class="lu" type="url" inputmode="url" value="${esc(l.url)}" placeholder="Paste a list link (Amazon, Target, Etsy…)" aria-label="List link"><button type="button" class="ib" data-act="lkrm" data-v="${i}" aria-label="Remove link">${I.x}</button></div>`).join('')}</div>
  <div><button type="button" class="lnk" data-act="lkadd">${I.plus} Add a list link</button></div></div>
  <div class="f"><span>Presently wishlist</span>${p.wish?`<div class="wl"><button type="button" class="btn2" data-act="wcopy" data-v="k">${I.link} Copy ${esc(firstName(p.name))}’s link</button><button type="button" class="btn2 fam" data-act="wcopy" data-v="f">${I.link} Copy family link</button><a class="lnk" href="/list.html?f=${esc(p.wish.f)}" target="_blank" rel="noopener">Open family view</a></div>
- <p class="hint">${esc(firstName(p.name))} adds and stars things with their link. Family use the other link to claim gifts and find where to buy. Claims stay hidden from ${esc(firstName(p.name))}.</p>`
+ <p class="hint">${p.wish.s?`<b>${esc(location.host+'/'+p.wish.s)}</b>. `:''}${esc(firstName(p.name))} adds and stars things with their link. Family use the other link to claim gifts and find where to buy. Claims stay hidden from ${esc(firstName(p.name))}.</p>`
  :isNew?'<p class="hint">Save this person first, then you can make a wishlist they can add to.</p>'
  :!col?'<p class="hint">Sign in to make a shareable wishlist.</p>'
  :`<div><button type="button" class="btn2" data-act="wmake" ${state.wmaking?'disabled':''}>${I.plus} Make a wishlist for ${esc(firstName(p.name))}</button></div><p class="hint">A link they can add to and update as they grow, plus a family link so nobody doubles up.</p>`}</div>
@@ -633,11 +633,15 @@ function editorHtml(){const p=draft,isNew=!state.people[p.id],cur=p.icon||DEFICO
  <label class="f"><span>Budget for this person (optional)</span><input id="fbu" inputmode="decimal" placeholder="$" value="${p.budget?esc(p.budget):''}"></label>
  <div class="acts">${isNew?'':'<button type="button" class="del" data-act="pdel">Remove person</button>'}<button type="button" class="cta" data-act="psave">${isNew?'Add to list':'Save'}</button></div></div>`}
 const firstName=n=>(n||'').trim().split(/\s+/)[0]||'Their';
+// Short kid link name: first name, plain letters and numbers (Zoë -> zoe).
+const slugOf=n=>firstName(n).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,26);
+const kidLink=w=>w.s?location.origin+'/'+w.s:location.origin+'/list.html?k='+w.k;
 const wkey=()=>{const a=new Uint8Array(24);crypto.getRandomValues(a);return [...a].map(b=>'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b%62]).join('')};
 async function makeWish(){if(!fsdb||!auth||!auth.currentUser||!draft)return;const id=draft.id,kid=firstName(draft.name),u=auth.currentUser.uid,k=wkey(),f=wkey();
  state.wmaking=true;reEditor();
- try{const b=fsdb.batch();b.set(fsdb.doc('wishlists/'+k),{owner:u,kid,items:[],updated:Date.now()});b.set(fsdb.doc('families/'+f),{owner:u,kidKey:k,kid,claims:{},updated:Date.now()});await b.commit();
-  const p=state.people[id];if(p){p.wish={k,f};put(id,p)}if(draft&&draft.id===id){draft.wish={k,f};reEditor()}toast('Wishlist made. Copy the links to share')}
+ try{let s='';const base=slugOf(draft.name);if(base)for(let n=1;n<50&&!s;n++){const c=base+(n>1?n:'');if(!(await fsdb.doc('slugs/'+c).get()).exists)s=c}
+  const b=fsdb.batch();if(s)b.set(fsdb.doc('slugs/'+s),{owner:u,k});b.set(fsdb.doc('wishlists/'+k),{owner:u,kid,items:[],updated:Date.now()});b.set(fsdb.doc('families/'+f),{owner:u,kidKey:k,kid,claims:{},updated:Date.now()});await b.commit();
+  const w=s?{k,f,s}:{k,f};const p=state.people[id];if(p){p.wish=w;put(id,p)}if(draft&&draft.id===id){draft.wish=w;reEditor()}toast('Wishlist made. Copy the links to share')}
  catch(e){toast('Couldn’t make the wishlist. Try again')}
  state.wmaking=false;if(draft&&draft.id===id)reEditor()}
 function syncDraft(){if(!draft)return;const v=id=>{const e=$('#'+id);return e?e.value:''};
@@ -798,7 +802,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
  case 'edit':openEditor(pid);break;
  case 'view':state.view=v;state.adding=null;renderVt();renderChips();renderGrid();window.scrollTo({top:$('#vt').offsetTop-12,behavior:'smooth'});break;
  case 'wmake':makeWish();break;
- case 'wcopy':{const w=draft&&draft.wish;if(!w)break;const url=location.origin+'/list.html?'+(v==='k'?'k='+w.k:'f='+w.f);const who=v==='k'?firstName(draft.name)+'’s link':'Family link';
+ case 'wcopy':{const w=draft&&draft.wish;if(!w)break;const url=v==='k'?kidLink(w):location.origin+'/list.html?f='+w.f;const who=v==='k'?firstName(draft.name)+'’s link':'Family link';
   try{navigator.clipboard.writeText(url).then(()=>toast(who+' copied'),()=>toast(url))}catch(e){toast(url)}break}
  case 'layout':state.layout=v;state.open=null;try{localStorage.setItem('presently.layout',v)}catch(e){}renderGrid();break;
  case 'lopen':{state.open=state.open===pid?null:pid;state.adding=null;renderGrid();const c=$('#c-'+pid);if(c&&state.open)c.scrollIntoView({behavior:'smooth',block:'nearest'});break}
