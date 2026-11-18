@@ -62,6 +62,10 @@ input{width:100%;min-height:44px;border:var(--bd);border-radius:14px;background:
 .tier{color:var(--green);font-weight:800;letter-spacing:1px}
 .ib{flex:0 0 40px;width:40px;height:40px;border-radius:50%;border:var(--bd);background:transparent;display:grid;place-items:center;color:var(--ink)}
 .ib svg{width:16px;height:16px}
+.uh{display:block;min-height:18px;margin:-6px 0 6px;color:var(--soft);font-size:13px;font-weight:600}
+.how p{margin:8px 0;color:var(--soft);font-weight:500}.how p b,.how li b{color:var(--ink)}.how ol{margin:6px 0 10px;padding-left:22px}.how li{color:var(--soft);font-weight:500;padding:4px 0}
+.cp{display:flex;align-items:center;gap:10px;margin-top:6px}.cp code{flex:1;min-width:0;overflow-wrap:anywhere;background:var(--bg);border:var(--bd);border-radius:12px;padding:8px 10px;font-size:12.5px;color:var(--ink)}
+.bmk{display:inline-block;margin-top:6px;padding:8px 14px;border-radius:99px;background:var(--pink);color:#0d0c0b;font-weight:800;text-decoration:none;cursor:grab}
 .edf{display:flex;flex-direction:column;gap:2px}.eacts{display:flex;justify-content:flex-end;align-items:center;gap:14px}
 .acts{display:flex;flex-wrap:wrap;gap:8px;padding-left:52px}
 .pill{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:99px;border:var(--bd);background:transparent;font-weight:700;font-size:14px}
@@ -104,6 +108,14 @@ const I={plus:ui('<path d="M12 5v14M5 12h14"/>'),x:ui('<path d="M6 6l12 12M18 6L
 I.pencil=ui('<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>');
 const STARS=['☆','⭐️','🌟'],STARLBL=['Nice to have','Really want','Want most'];
 function normUrl(u){u=(u||'').trim();if(!u)return '';if(!/^https?:\/\//i.test(u))u='https://'+u;try{const x=new URL(u);return /^https?:$/.test(x.protocol)&&x.hostname.includes('.')?x.href:''}catch(e){return ''}}
+// A name to start from when the page title can't be read: the most wordy part of the link's path.
+function slugName(u){try{const segs=new URL(u).pathname.split('/').map(s=>{try{return decodeURIComponent(s)}catch(e){return s}})
+  .filter(s=>s.length>2&&/[a-z]/i.test(s)&&/[-_ +]/.test(s)&&!/^(ref=|A-\d)/.test(s));
+ let t=(segs.sort((a,b)=>b.length-a.length)[0]||'').replace(/\.(html?|php|aspx?)$/i,'').replace(/[-_+ ]+/g,' ').trim();
+ if(!t)return '';t=t[0].toUpperCase()+t.slice(1);return t.length>60?t.slice(0,60).replace(/\s+\S*$/,''):t}catch(e){return ''}}
+function cleanTitle(s){s=String(s||'').replace(/\s+/g,' ').trim().replace(/^Amazon\.com\s*:\s*/i,'').replace(/\s*:\s*[^:]*Amazon\.com[^:]*$/i,'');
+ const c=s.slice(15).search(/\s*[,|(\[]/);if(c>=0)s=s.slice(0,c+15).trim();return s.length>70?s.slice(0,70).replace(/\s+\S*$/,''):s}
+const urlIn=s=>{const m=String(s||'').match(/https?:\/\/[^\s<>"]+/i);return m?m[0]:normUrl(s)};
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return 'link'}};
 let undoFn=null;
 function toast(msg,undo){const el=$('#toast');el.innerHTML=`<span>${esc(msg)}</span>${undo?'<button data-act="undo">Undo</button>':''}`;undoFn=undo||null;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>{el.classList.remove('on');undoFn=null},undo?6000:2400)}
@@ -111,7 +123,9 @@ function fail(t,p){$('#app').innerHTML=`<div class="msg"><h2>${esc(t)}</h2><p>${
 
 const q=new URLSearchParams(location.search),KK=q.get('k'),FK=q.get('f'),okKey=s=>/^[A-Za-z0-9]{16,40}$/.test(s||'');
 const mode=okKey(FK)?'fam':okKey(KK)?'kid':null;
-const st={wish:null,fam:null,tier:0,star:1,busy:{},me:''};
+// A link handed over by the iPhone Shortcut (#add=<link>) or the bookmark button (?add=<link>&t=<title>).
+const handed={u:urlIn(q.get('add')||(location.hash.match(/#add=(.+)$/)||[])[1]||''),t:cleanTitle(q.get('t')||'')};
+const st={wish:null,fam:null,tier:0,star:1,busy:{},me:'',auto:'',hint:'',look:0};
 try{st.me=localStorage.getItem('presently.me')||''}catch(e){}
 
 if(!mode)fail('This link isn’t complete','Ask whoever sent it for the full link.');
@@ -135,11 +149,21 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
   const head=`<header class="hd"><div class="frame"><div class="badge">${mode==='kid'?'MY WISHLIST':'FAMILY VIEW'}</div><h1 class="wm">${esc(kid)}’s <span>Wishlist</span></h1>
    <p class="sub">${mode==='kid'?'Add what you’d love. Tap the star to show how much you want it. Change it anytime.':'Tap “I’m getting this” so nobody doubles up. '+esc(kid)+' can’t see who’s getting what.'}</p></div></header>`;
   const add=`<form class="box" id="addf" novalidate><h2>${mode==='kid'?'Add something':'Add a gift idea'}</h2>
+   <label class="f"><span>Link (optional)</span><input id="u" type="url" inputmode="url" autocomplete="off" placeholder="Paste a link and the name fills in"></label><small class="uh" id="uh">${esc(st.hint)}</small>
    <label class="f"><span>What is it?</span><input id="n" autocomplete="off" placeholder="Keyboard, Roblox gift card, cozy hat…" maxlength="120"></label>
-   <label class="f"><span>Link (optional)</span><input id="u" type="url" inputmode="url" autocomplete="off" placeholder="Paste a link if you have one"></label>
    <div class="f"><span>How much do you want it?</span><div class="pick">${STARS.map((s,i)=>`<button type="button" class="${st.star===i?'on':''}" data-act="pstar" data-v="${i}" aria-pressed="${st.star===i}">${s} ${STARLBL[i]}</button>`).join('')}</div></div>
    <div class="f"><span>Price (a guess is fine)</span><div class="pick">${['?','$','$$','$$$'].map((s,i)=>`<button type="button" class="${st.tier===i?'on':''}" data-act="ptier" data-v="${i}" aria-pressed="${st.tier===i}">${i?s:'Not sure'}</button>`).join('')}</div></div>
    <button class="cta">${I.plus} Add to list</button></form>`;
+  const KP=mode==='kid'?'k='+KK:'f='+FK,base=location.origin+'/list.html?'+KP;
+  const bm=`javascript:(()=>{window.open('${base}&add='+encodeURIComponent(location.href)+'&t='+encodeURIComponent(document.title))})()`;
+  const how=`<details class="box got how"><summary>Add from any app</summary>
+   <p><b>iPhone.</b> Set this up once. Then on any product, tap Share and pick <b>Add to my wishlist</b>.</p>
+   <ol><li>Open the <b>Shortcuts</b> app and tap <b>+</b>.</li>
+   <li>Add the action <b>Get URLs from Input</b>.</li>
+   <li>Add a <b>Text</b> action. Paste this in, then insert <b>URLs</b> right after it:<span class="cp"><code>${esc(base)}#add=</code><button type="button" class="lnk" data-act="cpy">Copy</button></span></li>
+   <li>Add <b>Open URLs</b>.</li>
+   <li>Name it <b>Add to my wishlist</b>, tap <b>ⓘ</b> and turn on <b>Show in Share Sheet</b>.</li></ol>
+   <p><b>Computer.</b> Drag this to your bookmarks bar, then click it on any product page: <a class="bmk" href="${esc(bm)}" onclick="return false">+ My wishlist</a></p></details>`;
   const me=mode==='fam'?`<div class="box"><label class="f" style="margin:0"><span>Your name (so family knows who’s getting what)</span><input id="me" autocomplete="name" placeholder="Aunt Belle" value="${esc(st.me)}" maxlength="40"></label></div>`:'';
   const li=i=>{const c=claims[i.id],mine=c&&st.me&&c.by===st.me,r=research[i.id],busy=st.busy[i.id];
    if(st.editing===i.id)return `<li class="it"><form class="edf" data-id="${i.id}" novalidate><label class="f"><span>Name</span><input id="en" value="${esc(i.name)}" maxlength="120" autocomplete="off"></label><label class="f"><span>Link</span><input id="eu" type="url" inputmode="url" value="${esc(i.url||'')}" placeholder="Paste a link" autocomplete="off"></label><div class="eacts"><button type="button" class="lnk" data-act="ecancel">Cancel</button><button class="pill go">Save</button></div></form></li>`;
@@ -153,10 +177,12 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
      ${r&&r.name===i.name?`<div class="res">${r.summary?`<p>${esc(r.summary)}</p>`:''}<ol>${(r.options||[]).map(o=>`<li><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.store)}</a> · <b>${esc(o.price)}</b>${o.note?` <em>· ${esc(o.note)}</em>`:''}</li>`).join('')}</ol></div>`:''}`:''}</li>`};
   const list=open.length?`<ul class="items">${open.map(li).join('')}</ul>`:`<p class="empty">${mode==='kid'?'Nothing here yet. Add the first thing you want!':'Nothing on the list right now.'}</p>`;
   const gotH=got.length?`<details class="box got"><summary>Already got (${got.length})</summary><ul style="list-style:none;margin:0;padding:0">${got.map(i=>`<li>${esc(i.name)} · ${i.gotYear}</li>`).join('')}</ul></details>`:'';
-  $('#app').innerHTML=head+(mode==='kid'?add+list:me+list+add)+(mode==='fam'?gotH:'')+`<p class="foot">Made with Presently</p>`;
+  $('#app').innerHTML=head+(mode==='kid'?add+how+list:me+list+add+how)+(mode==='fam'?gotH:'')+`<p class="foot">Made with Presently</p>`;
   if(vals.en!=null&&$('#en'))$('#en').value=vals.en;if(vals.eu!=null&&$('#eu'))$('#eu').value=vals.eu;
   if(vals.n!=null)$('#n').value=vals.n;if(vals.u!=null)$('#u').value=vals.u;if(vals.me!=null&&$('#me'))$('#me').value=vals.me;
-  if(keep&&$('#'+keep))$('#'+keep).focus()}
+  if(keep&&$('#'+keep))$('#'+keep).focus();
+  if(handed.u){const h=Object.assign({},handed);handed.u='';history.replaceState(null,'',location.pathname+'?'+KP);
+   $('#u').value=h.u;if(h.t){$('#n').value=h.t;st.auto=h.t}else nameFor(h.u);$('#addf').scrollIntoView({block:'start'});toast('Pick the stars and price, then Add')}}
  st.render=render;
 
  document.addEventListener('submit',e=>{if(e.target.classList.contains('edf')){e.preventDefault();const id=e.target.dataset.id,n=$('#en').value.trim(),u=normUrl($('#eu').value);if(!n){$('#en').focus();return}
@@ -165,8 +191,13 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
   if(e.target.id!=='addf')return;e.preventDefault();const n=$('#n').value.trim();if(!n){$('#n').focus();return}
   if(mode==='fam'&&!st.me){$('#me').focus();toast('Add your name first');return}
   const it={id:uid(),name:n.slice(0,120),url:normUrl($('#u').value),star:st.star,tier:st.tier,added:Date.now()};if(mode==='fam')it.by=st.me;
-  edit(items=>items.push(it)).then(()=>{if(mode==='fam')claim(it.id,{by:st.me,at:Date.now()})});$('#n').value='';$('#u').value='';toast(mode==='kid'?'Added!':'Added and marked as yours')});
- document.addEventListener('input',e=>{if(e.target.id==='me'){st.me=e.target.value.trim();try{localStorage.setItem('presently.me',st.me)}catch(x){}}});
+  edit(items=>items.push(it)).then(()=>{if(mode==='fam')claim(it.id,{by:st.me,at:Date.now()})});$('#n').value='';$('#u').value='';st.auto='';toast(mode==='kid'?'Added!':'Added and marked as yours')});
+ // Fills the name from the link: the page title if the site lets us read it, else words from the link.
+ async function nameFor(u){u=normUrl(u);if(!u)return;const turn=++st.look;const hint=t=>{st.hint=t;const h=$('#uh');if(h)h.textContent=t};hint('Finding the name…');
+  let t='';try{const r=await firebase.app().functions('us-central1').httpsCallable('linkInfo',{timeout:15000})(mode==='kid'?{url:u,k:KK}:{url:u,f:FK});t=(r.data&&r.data.title)||''}catch(e){}
+  if(turn!==st.look)return;hint('');t=t||slugName(u);const n=$('#n');if(t&&n&&(!n.value.trim()||n.value===st.auto)){n.value=t;st.auto=t}}
+ let urlT=null;
+ document.addEventListener('input',e=>{if(e.target.id==='u'){clearTimeout(urlT);const v=e.target.value,u=urlIn(v);if(u&&u!==v.trim())e.target.value=u;urlT=setTimeout(()=>nameFor(u),u&&u!==v.trim()?0:500);return}if(e.target.id==='me'){st.me=e.target.value.trim();try{localStorage.setItem('presently.me',st.me)}catch(x){}}});
  document.addEventListener('change',e=>{if(e.target.id==='me')render()});
  document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,id=b.dataset.id,v=+b.dataset.v;
   const item=st.wish&&(st.wish.items||[]).find(i=>i.id===id);
@@ -174,6 +205,7 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
   case 'undo':if(undoFn){undoFn();undoFn=null;$('#toast').classList.remove('on')}break;
   case 'edit':st.editing=id;render();{const n=$('#en');if(n)n.focus()}break;
   case 'ecancel':st.editing=null;render();break;
+  case 'cpy':{const t=b.previousElementSibling.textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Copied'),()=>toast('Press and hold to copy'));break}
   case 'pstar':st.star=v;render();break;
   case 'ptier':st.tier=v;render();break;
   case 'star':edit(items=>{const i=items.find(x=>x.id===id);if(i)i.star=((i.star||0)+1)%3});break;
