@@ -15,7 +15,8 @@
 //     "add":     [{ "name":"Moses Badran", "group":"pg", "birthday":"--11-02", "started":"2026-09-22" }],
 //     "remove":  ["p_x"],
 //     "wishlist":{ "key":"<kidKey>", "add":[{ "name":"Mousepad", "star":1, "tier":1, "url":"",
-//                                             "given":2026, "claimBy":"Belle" }] } }
+//                                             "given":2026, "claimBy":"Belle" }],
+//                 "set":[{ "id":"<itemId>", "url":"https://..." }] } }
 // Only these docs can be touched: users/<uid>/items/*, wishlists/*, families/*.
 const path = require('path');
 const fs = require('fs');
@@ -86,7 +87,7 @@ async function build(plan) {
     notes.push(`remove ${snap.get('name')} (${snap.get('group')}, ${(snap.get('gifts') || []).length} gifts)`);
   }
   if (plan.wishlist) {
-    const {key, add = []} = plan.wishlist;
+    const {key, add = [], set = []} = plan.wishlist;
     const wref = db.doc(`wishlists/${key}`); const w = await wref.get(); if (!w.exists) die('No wishlist with that key');
     const fsnap = (await db.collection('families').where('kidKey', '==', key).limit(1).get()).docs[0];
     const items = [...(w.get('items') || [])]; const claims = {...(fsnap ? fsnap.get('claims') || {} : {})};
@@ -97,9 +98,16 @@ async function build(plan) {
       const it = {id: uid(), name: String(x.name).slice(0, 120), url: x.url || '', star: Math.min(2, Math.max(0, x.star | 0)),
         tier: Math.min(3, Math.max(0, x.tier | 0)), added: Date.now()};
       if (x.given) it.gotYear = x.given;
-      if (x.claimBy) { if (!fsnap) die('No family doc to claim on'); claims[it.id] = {by: x.claimBy, at: Date.now()}; }
+      if (x.claimBy) { if (!fsnap) die('No family doc to claim on'); it.by = x.claimBy; claims[it.id] = {by: x.claimBy, at: Date.now()}; }
       items.push(it);
       notes.push(`add to ${w.get('kid')}'s list: ${it.name} ${'★'.repeat(it.star)}${'$'.repeat(it.tier)}${it.gotYear ? ', given ' + it.gotYear : ''}${x.claimBy ? ', claimed by ' + x.claimBy : ''}`);
+    }
+    for (const {id, ...ch} of set) {
+      const i = items.findIndex((x) => x.id === id); if (i < 0) die(`No item ${id}`);
+      const bad = Object.keys(ch).filter((k) => !['name', 'url', 'star', 'tier', 'by', 'gotYear'].includes(k)); if (bad.length) die(`Can't set ${bad.join(', ')}`);
+      if (ch.url && !/^https?:\/\//.test(ch.url)) die('Links must start with http');
+      items[i] = {...items[i], ...ch};
+      notes.push(`update "${items[i].name}": ${Object.keys(ch).map((k) => `${k} -> ${JSON.stringify(ch[k])}`).join(', ')}`);
     }
     if (items.length > 150) die('A list holds up to 150 items');
     writes.push({ref: wref, before: w.data(), after: {...w.data(), items, updated: Date.now()}});

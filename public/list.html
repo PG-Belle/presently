@@ -62,6 +62,7 @@ input{width:100%;min-height:44px;border:var(--bd);border-radius:14px;background:
 .tier{color:var(--green);font-weight:800;letter-spacing:1px}
 .ib{flex:0 0 40px;width:40px;height:40px;border-radius:50%;border:var(--bd);background:transparent;display:grid;place-items:center;color:var(--ink)}
 .ib svg{width:16px;height:16px}
+.edf{display:flex;flex-direction:column;gap:2px}.eacts{display:flex;justify-content:flex-end;align-items:center;gap:14px}
 .acts{display:flex;flex-wrap:wrap;gap:8px;padding-left:52px}
 .pill{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:99px;border:var(--bd);background:transparent;font-weight:700;font-size:14px}
 .pill svg{width:15px;height:15px}
@@ -100,6 +101,7 @@ const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slic
 const ui=d=>`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const I={plus:ui('<path d="M12 5v14M5 12h14"/>'),x:ui('<path d="M6 6l12 12M18 6L6 18"/>'),check:ui('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
  search:ui('<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>'),gift:ui('<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9c-2-4-6-4-6-1.5S10 9 12 9c2 0 6-.5 6-1.5S14 5 12 9"/>')};
+I.pencil=ui('<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>');
 const STARS=['☆','⭐️','🌟'],STARLBL=['Nice to have','Really want','Want most'];
 function normUrl(u){u=(u||'').trim();if(!u)return '';if(!/^https?:\/\//i.test(u))u='https://'+u;try{const x=new URL(u);return /^https?:$/.test(x.protocol)&&x.hostname.includes('.')?x.href:''}catch(e){return ''}}
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return 'link'}};
@@ -126,12 +128,13 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
  const claim=(id,v)=>fref.update({['claims.'+id]:v===null?firebase.firestore.FieldValue.delete():v,updated:Date.now()}).catch(()=>toast('That didn’t save. Try again'));
 
  function render(){const w=st.wish;if(!w||(mode==='fam'&&!st.fam))return;const kid=w.kid||'My';
-  const all=(w.items||[]),open=all.filter(i=>!i.gotYear).sort((a,b)=>(b.star||0)-(a.star||0)||(a.added||0)-(b.added||0)),got=all.filter(i=>i.gotYear).sort((a,b)=>b.gotYear-a.gotYear);
+  // The kid page shows only what the kid added and hasn't been given yet: family ideas and given gifts would spoil surprises.
+  const all=(w.items||[]).filter(i=>mode==='fam'||(!i.by&&!i.gotYear)),open=all.filter(i=>!i.gotYear).sort((a,b)=>(b.star||0)-(a.star||0)||(a.added||0)-(b.added||0)),got=all.filter(i=>i.gotYear).sort((a,b)=>b.gotYear-a.gotYear);
   const claims=(st.fam&&st.fam.claims)||{},research=(st.fam&&st.fam.research)||{};
-  const keep=document.activeElement&&document.activeElement.id,vals={n:$('#n')&&$('#n').value,u:$('#u')&&$('#u').value,me:$('#me')&&$('#me').value};
+  const keep=document.activeElement&&document.activeElement.id,vals={en:$('#en')&&$('#en').value,eu:$('#eu')&&$('#eu').value,n:$('#n')&&$('#n').value,u:$('#u')&&$('#u').value,me:$('#me')&&$('#me').value};
   const head=`<header class="hd"><div class="frame"><div class="badge">${mode==='kid'?'MY WISHLIST':'FAMILY VIEW'}</div><h1 class="wm">${esc(kid)}’s <span>Wishlist</span></h1>
    <p class="sub">${mode==='kid'?'Add what you’d love. Tap the star to show how much you want it. Change it anytime.':'Tap “I’m getting this” so nobody doubles up. '+esc(kid)+' can’t see who’s getting what.'}</p></div></header>`;
-  const add=`<form class="box" id="addf"><h2>${mode==='kid'?'Add something':'Add a gift idea'}</h2>
+  const add=`<form class="box" id="addf" novalidate><h2>${mode==='kid'?'Add something':'Add a gift idea'}</h2>
    <label class="f"><span>What is it?</span><input id="n" autocomplete="off" placeholder="Keyboard, Roblox gift card, cozy hat…" maxlength="120"></label>
    <label class="f"><span>Link (optional)</span><input id="u" type="url" inputmode="url" autocomplete="off" placeholder="Paste a link if you have one"></label>
    <div class="f"><span>How much do you want it?</span><div class="pick">${STARS.map((s,i)=>`<button type="button" class="${st.star===i?'on':''}" data-act="pstar" data-v="${i}" aria-pressed="${st.star===i}">${s} ${STARLBL[i]}</button>`).join('')}</div></div>
@@ -139,21 +142,27 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
    <button class="cta">${I.plus} Add to list</button></form>`;
   const me=mode==='fam'?`<div class="box"><label class="f" style="margin:0"><span>Your name (so family knows who’s getting what)</span><input id="me" autocomplete="name" placeholder="Aunt Belle" value="${esc(st.me)}" maxlength="40"></label></div>`:'';
   const li=i=>{const c=claims[i.id],mine=c&&st.me&&c.by===st.me,r=research[i.id],busy=st.busy[i.id];
+   if(st.editing===i.id)return `<li class="it"><form class="edf" data-id="${i.id}" novalidate><label class="f"><span>Name</span><input id="en" value="${esc(i.name)}" maxlength="120" autocomplete="off"></label><label class="f"><span>Link</span><input id="eu" type="url" inputmode="url" value="${esc(i.url||'')}" placeholder="Paste a link" autocomplete="off"></label><div class="eacts"><button type="button" class="lnk" data-act="ecancel">Cancel</button><button class="pill go">Save</button></div></form></li>`;
    return `<li class="it ${mode==='fam'&&c?(mine?'mine':'taken'):''}"><div class="top">
     ${mode==='kid'?`<button class="st ${i.star?'':'off'}" data-act="star" data-id="${i.id}" aria-label="${STARLBL[i.star||0]}. Tap to change">${STARS[i.star||0]}</button>`:`<span class="st ${i.star?'':'off'}" title="${STARLBL[i.star||0]}">${STARS[i.star||0]}</span>`}
     <div class="nm"><b>${esc(i.name)}</b><small>${i.tier?`<span class="tier">${'$'.repeat(i.tier)}</span>`:''}${i.url?`<a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(host(i.url))}</a>`:''}${mode==='fam'&&i.by?`<span>added by ${esc(i.by)}</span>`:''}</small></div>
+    <button class="ib" data-act="edit" data-id="${i.id}" aria-label="Edit ${esc(i.name)}">${I.pencil}</button>
     ${mode==='kid'?`<button class="ib" data-act="rm" data-id="${i.id}" aria-label="Remove ${esc(i.name)}">${I.x}</button>`:''}</div>
-    ${mode==='fam'?`<div class="acts">${c?`<span class="claim">${I.check} ${mine?'You’re getting this':esc(c.by)+' is getting this'}</span>${mine?`<button class="lnk" data-act="unclaim" data-id="${i.id}">Undo</button><button class="pill go" data-act="given" data-id="${i.id}">${I.gift} Mark as given</button>`:''}`:`<button class="pill go" data-act="claim" data-id="${i.id}">${I.check} I’m getting this</button>`}
+    ${mode==='fam'?`<div class="acts">${c?`<span class="claim">${I.check} ${mine?'You’re getting this':esc(c.by)+' is getting this'}</span>${mine?`<button class="lnk" data-act="unclaim" data-id="${i.id}">Undo</button><button class="pill go" data-act="given" data-id="${i.id}">${I.gift} We got it</button>`:''}`:`<button class="pill go" data-act="claim" data-id="${i.id}">${I.check} I’m getting this</button>`}
      ${!r||r.name!==i.name?`<button class="pill ai" data-act="find" data-id="${i.id}" ${busy?'disabled':''}>${busy?'<span class="spin"></span> Looking…':I.search+' Find the best place'}</button>`:''}</div>
      ${r&&r.name===i.name?`<div class="res">${r.summary?`<p>${esc(r.summary)}</p>`:''}<ol>${(r.options||[]).map(o=>`<li><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.store)}</a> · <b>${esc(o.price)}</b>${o.note?` <em>· ${esc(o.note)}</em>`:''}</li>`).join('')}</ol></div>`:''}`:''}</li>`};
   const list=open.length?`<ul class="items">${open.map(li).join('')}</ul>`:`<p class="empty">${mode==='kid'?'Nothing here yet. Add the first thing you want!':'Nothing on the list right now.'}</p>`;
   const gotH=got.length?`<details class="box got"><summary>Already got (${got.length})</summary><ul style="list-style:none;margin:0;padding:0">${got.map(i=>`<li>${esc(i.name)} · ${i.gotYear}</li>`).join('')}</ul></details>`:'';
-  $('#app').innerHTML=head+(mode==='kid'?add+list:me+list+add)+gotH+`<p class="foot">Made with Presently</p>`;
+  $('#app').innerHTML=head+(mode==='kid'?add+list:me+list+add)+(mode==='fam'?gotH:'')+`<p class="foot">Made with Presently</p>`;
+  if(vals.en!=null&&$('#en'))$('#en').value=vals.en;if(vals.eu!=null&&$('#eu'))$('#eu').value=vals.eu;
   if(vals.n!=null)$('#n').value=vals.n;if(vals.u!=null)$('#u').value=vals.u;if(vals.me!=null&&$('#me'))$('#me').value=vals.me;
   if(keep&&$('#'+keep))$('#'+keep).focus()}
  st.render=render;
 
- document.addEventListener('submit',e=>{if(e.target.id!=='addf')return;e.preventDefault();const n=$('#n').value.trim();if(!n){$('#n').focus();return}
+ document.addEventListener('submit',e=>{if(e.target.classList.contains('edf')){e.preventDefault();const id=e.target.dataset.id,n=$('#en').value.trim(),u=normUrl($('#eu').value);if(!n){$('#en').focus();return}
+   if($('#eu').value.trim()&&!u){$('#eu').focus();toast('That link doesn’t look right');return}
+   st.editing=null;edit(items=>{const i=items.find(x=>x.id===id);if(i){i.name=n.slice(0,120);i.url=u}});render();toast('Saved');return}
+  if(e.target.id!=='addf')return;e.preventDefault();const n=$('#n').value.trim();if(!n){$('#n').focus();return}
   if(mode==='fam'&&!st.me){$('#me').focus();toast('Add your name first');return}
   const it={id:uid(),name:n.slice(0,120),url:normUrl($('#u').value),star:st.star,tier:st.tier,added:Date.now()};if(mode==='fam')it.by=st.me;
   edit(items=>items.push(it)).then(()=>{if(mode==='fam')claim(it.id,{by:st.me,at:Date.now()})});$('#n').value='';$('#u').value='';toast(mode==='kid'?'Added!':'Added and marked as yours')});
@@ -163,13 +172,15 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
   const item=st.wish&&(st.wish.items||[]).find(i=>i.id===id);
   switch(a){
   case 'undo':if(undoFn){undoFn();undoFn=null;$('#toast').classList.remove('on')}break;
+  case 'edit':st.editing=id;render();{const n=$('#en');if(n)n.focus()}break;
+  case 'ecancel':st.editing=null;render();break;
   case 'pstar':st.star=v;render();break;
   case 'ptier':st.tier=v;render();break;
   case 'star':edit(items=>{const i=items.find(x=>x.id===id);if(i)i.star=((i.star||0)+1)%3});break;
   case 'rm':{if(!item)break;const copy=Object.assign({},item);edit(items=>{const k=items.findIndex(x=>x.id===id);if(k>-1)items.splice(k,1)});toast('Removed '+item.name,()=>edit(items=>{if(!items.some(x=>x.id===copy.id))items.push(copy)}));break}
   case 'claim':if(!st.me){$('#me').focus();toast('Add your name first');break}claim(id,{by:st.me,at:Date.now()});break;
   case 'unclaim':claim(id,null);break;
-  case 'given':{const y=new Date().getFullYear();edit(items=>{const i=items.find(x=>x.id===id);if(i)i.gotYear=y});toast('Marked as given',()=>edit(items=>{const i=items.find(x=>x.id===id);if(i)delete i.gotYear}));break}
+  case 'given':{const y=new Date().getFullYear();edit(items=>{const i=items.find(x=>x.id===id);if(i)i.gotYear=y});toast('Moved to Already got',()=>edit(items=>{const i=items.find(x=>x.id===id);if(i)delete i.gotYear}));break}
   case 'find':{if(st.busy[id])break;st.busy[id]=true;render();
    firebase.app().functions('us-central1').httpsCallable('findDeals',{timeout:300000})({f:FK,itemId:id})
     .catch(err=>toast(err&&err.code==='functions/resource-exhausted'?'That’s enough lookups for today. Try tomorrow':'Couldn’t look that up right now'))
