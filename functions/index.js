@@ -107,7 +107,7 @@ exports.findDeals = onCall(
     }
     if (!result) throw new HttpsError('internal', 'No result');
 
-    const clean = (s, n) => String(s || '').slice(0, n);
+    const clean = (s, n) => { s = String(s || '').trim(); return s.length <= n ? s : s.slice(0, n).replace(/\s+\S*$/, '') + '…'; };
     const saved = {
       name: item.name,
       at: Date.now(),
@@ -115,7 +115,7 @@ exports.findDeals = onCall(
       options: (result.options || [])
         .filter((o) => /^https:\/\//.test(o.url || ''))
         .slice(0, 3)
-        .map((o) => ({store: clean(o.store, 60), price: clean(o.price, 30), url: clean(o.url, 500), note: clean(o.note, 140)})),
+        .map((o) => ({store: clean(o.store, 60), price: clean(o.price, 30), url: clean(o.url, 500), note: clean(o.note, 220)})),
     };
     await famRef.update({[`research.${itemId}`]: saved});
     return saved;
