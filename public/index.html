@@ -240,6 +240,11 @@ svg{display:block}
 .wl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn2.fam{background:var(--green)}
 .btn2:disabled{opacity:.6}
+.dpo{display:flex;flex-direction:column;gap:6px}.dph{margin:4px 0 0;font-weight:800;color:var(--yellow)}.dph.miss2{color:var(--orange)}
+.dpl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:38vh;overflow:auto}
+.dpl li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;padding:6px 0;border-top:1px dashed var(--dash);font-size:14px}
+.dpl span{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 10px;color:var(--soft);font-weight:600}.dpl svg{width:14px;height:14px}.dpl s{opacity:.6}
+.cta:disabled{opacity:.5;cursor:default}
 .links a.wish{background:var(--pink)}
 .btn2 svg{width:18px;height:18px}
 .seg{display:flex;gap:6px;flex-wrap:wrap}
@@ -516,10 +521,75 @@ function calHtml(list){const now=today(),m0=now.getMonth(),y0=now.getFullYear();
   <div class="mrow"><span class="mt">${I.cake} Birthday lunch${bd.length?` · ${bd.length}`:''}</span>${bd.length?bd.map(p=>`<button class="bd" data-act="jump" data-p="${p.id}">${esc(p.name)} · ${parseD(p.birthday).getDate()}</button>`).join(''):'<span class="none">No birthdays</span>'}</div>
   ${an.length?`<div class="mrow"><span class="mt">${I.work} Work anniversaries</span>${an.map(x=>`<button class="bd ${MILES.includes(x.yrs)?'ms':'an'}" data-act="jump" data-p="${x.p.id}">${esc(x.p.name)} · ${x.yrs} yr${MILES.includes(x.yrs)?' ★':''}</button>`).join('')}</div>`:''}</section>`)}
  const miss=list.filter(p=>!p.birthday||(staffG.has(p.group)&&!p.started));
- return `<div class="shop"><div class="shead"><div><h2 class="ol co">Calendar</h2><p>Monthly birthday lunches and work anniversaries. ★ marks 1, 5 and 10+ year milestones.</p></div></div>
+ return `<div class="shop"><div class="shead"><div><h2 class="ol co">Calendar</h2><p>Monthly birthday lunches and work anniversaries. ★ marks 1, 5 and 10+ year milestones.</p></div><button class="btn2" data-act="dpaste">${I.cake} Paste dates</button></div>
  ${miss.length?`<details class="miss" open><summary><b>Missing dates</b> · ${miss.length} ${miss.length===1?'person':'people'}</summary><p class="hint">Pick a date and it saves right away.</p>
  <div class="qt"><div class="qh"><span>Name</span><span>Birthday</span><span>Start date</span></div>${miss.map(p=>`<div class="qr"><span>${esc(p.name)}</span><label><small>Birthday</small><input type="date" class="qd" data-p="${p.id}" data-k="birthday" value="${esc(p.birthday||'')}" aria-label="Birthday for ${esc(p.name)}"></label>${staffG.has(p.group)?`<label><small>Start date</small><input type="date" class="qd" data-p="${p.id}" data-k="started" value="${esc(p.started||'')}" aria-label="Start date for ${esc(p.name)}"></label>`:'<span></span>'}</div>`).join('')}</div></details>`:''}
  <div class="months">${mos.join('')}</div></div>`}
+// ---------- paste dates ----------
+let dpG=null,dpPlan=null;
+const MON3=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const nName=s=>String(s||'').toLowerCase().replace(/\(.*?\)/g,' ').replace(/[^a-z0-9' -]/g,' ').replace(/\s+/g,' ').trim();
+const pad2=n=>String(n).padStart(2,'0');
+function dpDate(c){c=String(c||'').trim();let m;
+ if((m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(c)))return{y:+m[1],m:+m[2],d:+m[3]};
+ if((m=/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/.exec(c))){let y=m[3]?+m[3]:null;if(y!==null&&y<100)y+=y>40?1900:2000;return{y,m:+m[1],d:+m[2]}}
+ if((m=/^(\d{1,2})[- ]([a-z]{3,})\.?(?:[- ,]+(\d{4}))?$/i.exec(c))){const i=MON3.indexOf(m[2].slice(0,3).toLowerCase());if(i>=0)return{y:m[3]?+m[3]:null,m:i+1,d:+m[1]}}
+ if((m=/^([a-z]{3,})\.?[- ](\d{1,2})(?:,?\s+(\d{4}))?$/i.exec(c))){const i=MON3.indexOf(m[1].slice(0,3).toLowerCase());if(i>=0)return{y:m[3]?+m[3]:null,m:i+1,d:+m[2]}}
+ return null}
+const dpOk=o=>o&&o.m>=1&&o.m<=12&&o.d>=1&&o.d<=31;
+const dpStr=o=>(o.y?o.y:'-')+'-'+pad2(o.m)+'-'+pad2(o.d);
+function dpParse(raw){const lines=raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),rows=[];let col=null;
+ lines.forEach(l=>{const cells=(l.includes('\t')?l.split('\t'):l.split(/\s*,\s*/)).map(s=>s.trim());
+  const low=cells.map(c=>c.toLowerCase());
+  if(low.some(c=>/birth/.test(c))||low.some(c=>/start/.test(c))){col={b:low.findIndex(c=>/birth/.test(c)),s:low.findIndex(c=>/start|hire/.test(c)),f:low.findIndex(c=>/first/.test(c)),l:low.findIndex(c=>/last/.test(c))};return}
+  const isDate=c=>dpOk(dpDate(c)),isJunk=c=>!c||/@/.test(c)||/^[\d()+\-.\s]{7,}$/.test(c)||isDate(c);
+  let first,last,b=null,s=null;
+  if(col&&(col.b>=0||col.s>=0)){if(col.b>=0)b=dpDate(cells[col.b]);if(col.s>=0)s=dpDate(cells[col.s]);
+   first=col.f>=0?cells[col.f]:cells.find(c=>!isJunk(c));last=col.l>=0?cells[col.l]:''}
+  else{const names=cells.filter(c=>!isJunk(c)),dates=cells.filter(isDate).map(dpDate);first=names[0];last=names[1]||'';
+   // Two dates: start date, then birthday. One date: a start date if it has a year, else a birthday.
+   if(dates.length>1){s=dates[0];b=dates[1]}else if(dates[0]){if(dates[0].y)s=dates[0];else b=dates[0]}}
+  if(!first)return;
+  rows.push({first:first.trim(),last:(last||'').trim(),b:dpOk(b)?b:null,s:dpOk(s)&&s.y?s:null})});
+ return rows}
+function dpMatch(r,pool){const f=nName(r.first),l=nName(r.last),full=(f+' '+l).trim(),nick=(/\((.+?)\)/.exec(r.first)||[])[1];
+ const alts=[f,nick?nName(nick):''].filter(Boolean);
+ let best=0,hits=[];pool.forEach(p=>{const n=nName(p.name);let sc=0;
+  if(n===full)sc=4;else if(alts.some(a=>n===a+' '+l))sc=4;
+  else if(l&&alts.some(a=>n===a+' '+l[0]||n===a+' '+l[0]+'.'||n.startsWith(a+' '+l[0])))sc=3;
+  else if(alts.includes(n))sc=2;
+  if(sc>best){best=sc;hits=[p]}else if(sc&&sc===best)hits.push(p)});
+ return hits.length===1?hits[0]:null}
+function dpBuild(){const raw=($('#dpin')||{}).value||'',rows=dpParse(raw),pool=ppl().filter(p=>inG(p,dpG)),used=new Set(),plan={upd:[],same:0,miss:[]};
+ rows.forEach(r=>{const p=dpMatch(r,pool);if(!p||used.has(p.id)){if(!p)plan.miss.push(r);return}used.add(p.id);
+  const ch={};
+  if(r.b){const old=parseD(p.birthday);let nb=dpStr(r.b);
+   if(!r.b.y&&old&&!old.noYear)nb=old.getFullYear()+nb.slice(1);
+   if(nb!==(p.birthday||''))ch.birthday=nb}
+  if(r.s){const ns=dpStr(r.s);if(ns!==(p.started||''))ch.started=ns}
+  if(Object.keys(ch).length)plan.upd.push({p,ch,r});else plan.same++});
+ return plan}
+const dpShow=s=>{const d=parseD(s);return d?`${MONTHS[d.getMonth()].slice(0,3)} ${d.getDate()}${d.noYear?'':', '+d.getFullYear()}`:''};
+function dpPreview(){const el=$('#dpout');if(!el)return;dpPlan=dpBuild();const P=dpPlan,raw=$('#dpin').value.trim();
+ if(!raw){el.innerHTML='';$('#dpgo').disabled=true;return}
+ const line=(x)=>{const bits=[];if(x.ch.birthday)bits.push(`${I.cake} ${dpShow(x.ch.birthday)}${x.p.birthday?` <s>${dpShow(x.p.birthday)}</s>`:''}`);if(x.ch.started)bits.push(`${I.work} ${dpShow(x.ch.started)}${x.p.started?` <s>${dpShow(x.p.started)}</s>`:''}`);return `<li><b>${esc(x.p.name)}</b><span>${bits.join(' ')}</span></li>`};
+ el.innerHTML=`${P.upd.length?`<p class="dph">${P.upd.length} to update</p><ul class="dpl">${P.upd.map(line).join('')}</ul>`:''}
+  ${P.same?`<p class="hint">${P.same} already up to date.</p>`:''}
+  ${P.miss.length?`<p class="dph miss2">Not found in ${esc(gLabel(dpG))}: ${P.miss.length}</p><p class="hint">${P.miss.map(r=>esc((r.first+' '+r.last).trim())).join(', ')}</p><label class="chk"><input type="checkbox" id="dpadd"> Add them to ${esc(gLabel(dpG))}</label>`:''}
+  ${!P.upd.length&&!P.miss.length&&!P.same?`<p class="hint">No names with dates found. Copy the rows including the name and date columns.</p>`:''}`;
+ $('#dpgo').disabled=!P.upd.length&&!P.miss.length}
+function dpHtml(){if(!dpG||!groups().some(g=>g.id===dpG))dpG=state.group!=='all'?state.group:(groups().find(g=>g.id==='pg')||groups()[0]).id;
+ return `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dpt"><div class="sh"><h2 id="dpt">Paste dates</h2><button class="ib" data-act="close" aria-label="Close">${I.x}</button></div>
+ <div class="f"><span>Group</span><div class="seg">${groups().map(g=>`<button type="button" class="${dpG===g.id?'on':''}" style="--t:${g.color}" data-act="dpset" data-v="${esc(g.id)}">${esc(g.label)}</button>`).join('')}</div></div>
+ <label class="f"><span>Rows from your staff sheet</span><textarea id="dpin" rows="6" placeholder="Copy the rows in Sheets or Excel and paste here. Include names, start date and birthday."></textarea></label>
+ <p class="hint">Matched by name. Nothing changes until you tap Update.</p>
+ <div id="dpout" class="dpo"></div>
+ <div class="acts"><button type="button" class="cta" id="dpgo" data-act="dpgo" disabled>Update</button></div></div>`}
+function dpApply(){const P=dpPlan||dpBuild(),before=[],added=[];
+ P.upd.forEach(({p,ch})=>{before.push([p.id,{birthday:p.birthday,started:p.started,age:p.age}]);if(ch.birthday){p.birthday=ch.birthday;p.age=null}if(ch.started)p.started=ch.started;put(p.id,p)});
+ if($('#dpadd')&&$('#dpadd').checked)P.miss.forEach(r=>{const p={id:'p_'+uid(),type:'person',name:(r.first.replace(/\s*\(.*?\)\s*/g,' ').trim()+' '+r.last).trim(),group:dpG,birthday:r.b?dpStr(r.b):'',started:r.s?dpStr(r.s):'',age:null,ageYear:THISYEAR,icon:'',photo:'',links:[],notes:'',budget:'',gifts:[],created:Date.now()};state.people[p.id]=p;put(p.id,p);added.push(p)});
+ closeModal();render();
+ const n=before.length;toast(`Updated ${n} ${n===1?'person':'people'}`+(added.length?` · added ${added.length}`:''),()=>{before.forEach(([id,o])=>{const p=state.people[id];if(p){Object.assign(p,o);put(id,p)}});added.forEach(p=>{delete state.people[p.id];put(p.id,null)});render()})}
 function renderLay(){const on=state.view==='cards',L=state.layout;$('#lay').hidden=!on;$('#grid').classList.toggle('list',on&&L==='list');
  $('#lay').innerHTML=`<button class="${L==='tiles'?'on':''}" data-act="layout" data-v="tiles" aria-pressed="${L==='tiles'}" aria-label="Show as tiles">${I.grid}</button><button class="${L==='list'?'on':''}" data-act="layout" data-v="list" aria-pressed="${L==='list'}" aria-label="Show as list">${I.rows}</button>`}
 function renderGrid(){renderLay();const ae=document.activeElement,keep=ae&&ae.closest&&ae.closest('.addg')?{p:ae.closest('.addg').dataset.p,name:ae.name,vals:[...ae.closest('.addg').querySelectorAll('input')].map(i=>i.value)}:null;
@@ -762,6 +832,9 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
  case 'backup':openModal(backupHtml());break;
  case 'bkcopy':{const t=$('#bkout');const ok=()=>toast('Copied. Paste it somewhere safe');try{navigator.clipboard.writeText(t.value).then(ok,()=>{t.select();toast('Selected. Copy it with your keyboard or long-press')})}catch(e){t.select();toast('Selected. Copy it with your keyboard or long-press')}break}
  case 'bkimport':doImport();break;
+ case 'dpaste':dpG=null;dpPlan=null;openModal(dpHtml());break;
+ case 'dpset':{const t=$('#dpin').value;dpG=v;openModal(dpHtml());$('#dpin').value=t;dpPreview();break}
+ case 'dpgo':dpApply();break;
  case 'bulk':bulkG=null;openModal(bulkHtml());{const t=$('#bn');if(t)setTimeout(()=>t.focus(),40)}break;
  case 'bgset':bulkG=v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));break;
  case 'bsaveppl':saveBulk();break;
@@ -792,7 +865,7 @@ document.addEventListener('change',async e=>{if(e.target.classList&&e.target.cla
  if(e.target.id==='ph'&&e.target.files[0]){try{const d=await readPhoto(e.target.files[0]);syncDraft();draft.photo=d;reEditor()}catch(err){toast('That photo couldn’t be read. Try a JPG or PNG')}}
  if(e.target.id==='fb'){const a=$('#fa');if(a){a.disabled=!!e.target.value;if(e.target.value){a.value='';const t=ageOf({birthday:e.target.value});a.placeholder=(t===null?'':t+' (from birthday)')}else a.placeholder='or just the age'}}});
 $('#modal').addEventListener('click',e=>{if(e.target.classList.contains('ov'))closeModal()});
-document.addEventListener('input',e=>{const id=e.target.id;if(tagD&&(id==='tto'||id==='tfrom'||id==='tgreet')){if(id==='tfrom')tagD.from=e.target.value;if(id==='tgreet')tagD.greet=e.target.value;clearTimeout(tagTimer);tagTimer=setTimeout(drawPreview,250)}});
+document.addEventListener('input',e=>{const id=e.target.id;if(id==='dpin'){dpPreview();return}if(tagD&&(id==='tto'||id==='tfrom'||id==='tgreet')){if(id==='tfrom')tagD.from=e.target.value;if(id==='tgreet')tagD.greet=e.target.value;clearTimeout(tagTimer);tagTimer=setTimeout(drawPreview,250)}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='ng'){e.preventDefault();const g=$('[data-act=grpadd],[data-act=grpadd2]');if(g)g.click();return}if(e.key==='Escape'&&$('#modal').innerHTML)closeModal();if(e.key==='Enter'&&e.target.closest&&e.target.closest('.sheet')&&e.target.tagName==='INPUT'){e.preventDefault();const s=$('.sheet [data-act=psave],.sheet [data-act=gsave],.sheet [data-act=bsave],.sheet [data-act=ggsave],.sheet [data-act=bsaveppl]');if(s)s.click()}});
 $('#q').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase();renderGrid()});
 
