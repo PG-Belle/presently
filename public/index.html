@@ -640,7 +640,7 @@ const wkey=()=>{const a=new Uint8Array(24);crypto.getRandomValues(a);return [...
 async function makeWish(){if(!fsdb||!auth||!auth.currentUser||!draft)return;const id=draft.id,kid=firstName(draft.name),u=auth.currentUser.uid,k=wkey(),f=wkey();
  state.wmaking=true;reEditor();
  try{let s='';const base=slugOf(draft.name);if(base)for(let n=1;n<50&&!s;n++){const c=base+(n>1?n:'');if(!(await fsdb.doc('slugs/'+c).get()).exists)s=c}
-  const b=fsdb.batch();if(s)b.set(fsdb.doc('slugs/'+s),{owner:u,k});b.set(fsdb.doc('wishlists/'+k),{owner:u,kid,items:[],updated:Date.now()});b.set(fsdb.doc('families/'+f),{owner:u,kidKey:k,kid,claims:{},updated:Date.now()});await b.commit();
+  const b=fsdb.batch();if(s)b.set(fsdb.doc('slugs/'+s),{owner:u,k});b.set(fsdb.doc('wishlists/'+k),{owner:u,kid,fam:f,items:[],updated:Date.now()});b.set(fsdb.doc('families/'+f),{owner:u,kidKey:k,kid,claims:{},updated:Date.now()});await b.commit();
   const w=s?{k,f,s}:{k,f};const p=state.people[id];if(p){p.wish=w;put(id,p)}if(draft&&draft.id===id){draft.wish=w;reEditor()}toast('Wishlist made. Copy the links to share')}
  catch(e){toast('Couldn’t make the wishlist. Try again')}
  state.wmaking=false;if(draft&&draft.id===id)reEditor()}
