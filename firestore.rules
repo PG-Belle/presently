@@ -18,7 +18,9 @@ service cloud.firestore {
         && request.resource.data.owner == request.auth.uid
         && request.resource.data.items is list;
       allow update: if request.resource.data.owner == resource.data.owner
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['items', 'kid', 'updated'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['items', 'kid', 'updated', 'amazon'])
+        && (!('amazon' in request.resource.data) || (request.resource.data.amazon is string && request.resource.data.amazon.size() <= 500
+            && request.resource.data.amazon.matches('^https?://([a-z0-9-]+[.])*(amazon[.]([a-z]{2,3}|co[.][a-z]{2}|com[.][a-z]{2})|a[.]co|amzn[.](to|eu))(/.*)?$')))
         && request.resource.data.items is list
         && request.resource.data.items.size() <= 150;
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;

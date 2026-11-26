@@ -83,6 +83,7 @@ input{width:100%;min-height:44px;border:var(--bd);border-radius:14px;background:
 .got summary{cursor:pointer;color:var(--yellow);font-weight:700;min-height:40px;display:flex;align-items:center}
 .got li{color:var(--soft);font-weight:600;padding:3px 0}
 .share p{margin:0 0 12px;color:var(--soft);font-weight:500}
+.amz .row{margin-top:4px}.amz a.al{color:var(--sky);font-weight:700;word-break:break-all}
 .empty{color:var(--soft);text-align:center;padding:18px 8px}
 .msg{text-align:center;padding:60px 16px}
 .msg h2{font:24px "Rammetto One",sans-serif;text-transform:uppercase;color:var(--pink);margin-bottom:10px}
@@ -118,6 +119,7 @@ function slugName(u){try{const segs=new URL(u).pathname.split('/').map(s=>{try{r
 function cleanTitle(s){s=String(s||'').replace(/\s+/g,' ').trim().replace(/^Amazon\.com\s*:\s*/i,'').replace(/\s*:\s*[^:]*Amazon\.com[^:]*$/i,'');
  const c=s.slice(15).search(/\s*[,|(\[]/);if(c>=0)s=s.slice(0,c+15).trim();return s.length>70?s.slice(0,70).replace(/\s+\S*$/,''):s}
 const urlIn=s=>{const m=String(s||'').match(/https?:\/\/[^\s<>"]+/i);return m?m[0]:normUrl(s)};
+const amzUrl=s=>{const u=normUrl(urlIn(s));try{const h=new URL(u).hostname;return /(^|\.)amazon\.([a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})$|^a\.co$|^amzn\.(to|eu)$/i.test(h)?u:''}catch(e){return ''}};
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return 'link'}};
 let undoFn=null;
 function toast(msg,undo){const el=$('#toast');el.innerHTML=`<span>${esc(msg)}</span>${undo?'<button data-act="undo">Undo</button>':''}`;undoFn=undo||null;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>{el.classList.remove('on');undoFn=null},undo?6000:2400)}
@@ -151,7 +153,7 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
   const claims=(st.fam&&st.fam.claims)||{},research=(st.fam&&st.fam.research)||{};
   // Family view: gifts someone else is getting go in a closed Already taken section with no names, so a kid who opens this link sees little.
   const others=i=>mode==='fam'&&claims[i.id]&&!(st.me&&claims[i.id].by===st.me),mineOpen=open.filter(i=>!others(i)),taken=open.filter(others);
-  const keep=document.activeElement&&document.activeElement.id,vals={en:$('#en')&&$('#en').value,eu:$('#eu')&&$('#eu').value,n:$('#n')&&$('#n').value,u:$('#u')&&$('#u').value,me:$('#me')&&$('#me').value};
+  const keep=document.activeElement&&document.activeElement.id,vals={en:$('#en')&&$('#en').value,eu:$('#eu')&&$('#eu').value,n:$('#n')&&$('#n').value,u:$('#u')&&$('#u').value,me:$('#me')&&$('#me').value,amz:$('#amz')&&$('#amz').value};
   const head=`<header class="hd"><div class="frame"><div class="badge">${mode==='kid'?'MY WISHLIST':'FAMILY VIEW'}</div><h1 class="wm">${esc(kid)}’s <span>Wishlist</span></h1>
    <p class="sub">${mode==='kid'?'Add what you’d love. Tap the star to show how much you want it. Change it anytime.':'Tap “I’m getting this” so nobody doubles up. Gifts someone else is getting move to Already taken.'}</p></div></header>`;
   const add=`<form class="box" id="addf" novalidate><h2>${mode==='kid'?'Add something':'Add a gift idea'}</h2>
@@ -184,16 +186,22 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
   const list=mineOpen.length?`<ul class="items">${mineOpen.map(li).join('')}</ul>`:`<p class="empty">${mode==='kid'?'Nothing here yet. Add the first thing you want!':(taken.length?'Everything left is taken.':'Nothing on the list right now.')}</p>`;
   const takenH=taken.length?`<details class="box got"><summary>Already taken (${taken.length})</summary><ul style="list-style:none;margin:0;padding:0">${taken.map(i=>`<li>${esc(i.name)}</li>`).join('')}</ul></details>`:'';
   const share=mode==='kid'&&w.fam?`<div class="box share"><h2>Share with grown-ups</h2><p>Send your list to family so they can pick gifts.</p><button class="cta" data-act="share">${I.gift} Share my list</button></div>`:'';
+  // The kid's own Amazon wishlist, saved as a link. Grown-ups open it from the family view.
+  const amz=mode==='kid'?(w.amazon&&!st.amzEdit?`<div class="box share amz"><h2>My Amazon wishlist</h2><p>Grown-ups can open it from your list.</p><a class="al" href="${esc(w.amazon)}" target="_blank" rel="noopener">${esc(host(w.amazon))} wishlist</a><div class="row"><button type="button" class="lnk" data-act="amzedit">Change</button><button type="button" class="lnk" data-act="amzrm">Remove</button></div></div>`
+   :`<form class="box share amz" id="amzf" novalidate><h2>Have an Amazon wishlist?</h2><p>In the Amazon app, open your list, tap Share, then Copy link. Paste it here.</p><label class="f"><span>Amazon wishlist link</span><input id="amz" type="url" inputmode="url" autocomplete="off" placeholder="amazon.com/hz/wishlist/…" value="${esc(w.amazon||'')}"></label><div class="row">${st.amzEdit?'<button type="button" class="lnk" data-act="amzcancel">Cancel</button>':''}<button class="pill go">Save</button></div></form>`)
+   :w.amazon?`<div class="box share amz"><h2>${esc(kid)}’s Amazon wishlist</h2><p>${esc(kid)} also keeps a list on Amazon. Amazon tracks what’s bought there, not this page.</p><a class="pill go" href="${esc(w.amazon)}" target="_blank" rel="noopener">Open Amazon wishlist</a></div>`:'';
   const gotH=got.length?`<details class="box got"><summary>Already got (${got.length})</summary><ul style="list-style:none;margin:0;padding:0">${got.map(i=>`<li>${esc(i.name)} · ${i.gotYear}</li>`).join('')}</ul></details>`:'';
-  $('#app').innerHTML=head+(mode==='kid'?add+list+share+how:me+list+takenH+add+how)+(mode==='fam'?gotH:'')+`<p class="foot">Made with Presently</p>`;
+  $('#app').innerHTML=head+(mode==='kid'?add+list+amz+share+how:me+amz+list+takenH+add+how)+(mode==='fam'?gotH:'')+`<p class="foot">Made with Presently</p>`;
   if(vals.en!=null&&$('#en'))$('#en').value=vals.en;if(vals.eu!=null&&$('#eu'))$('#eu').value=vals.eu;
-  if(vals.n!=null)$('#n').value=vals.n;if(vals.u!=null)$('#u').value=vals.u;if(vals.me!=null&&$('#me'))$('#me').value=vals.me;
+  if(vals.n!=null)$('#n').value=vals.n;if(vals.u!=null)$('#u').value=vals.u;if(vals.me!=null&&$('#me'))$('#me').value=vals.me;if(vals.amz!=null&&$('#amz'))$('#amz').value=vals.amz;
   if(keep&&$('#'+keep))$('#'+keep).focus();
   if(handed.u){const h=Object.assign({},handed);handed.u='';history.replaceState(null,'',short?location.pathname:location.pathname+'?'+KP);
    $('#u').value=h.u;if(h.t){$('#n').value=h.t;st.auto=h.t}else nameFor(h.u);$('#addf').scrollIntoView({block:'start'});toast('Pick the stars and price, then Add')}}
  st.render=render;
 
- document.addEventListener('submit',e=>{if(e.target.classList.contains('edf')){e.preventDefault();const id=e.target.dataset.id,n=$('#en').value.trim(),u=normUrl($('#eu').value);if(!n){$('#en').focus();return}
+ document.addEventListener('submit',e=>{if(e.target.id==='amzf'){e.preventDefault();const u=amzUrl($('#amz').value);if(!u){$('#amz').focus();toast('Paste the link to your Amazon wishlist');return}
+   wref.update({amazon:u.slice(0,500),updated:Date.now()}).then(()=>{st.amzEdit=false;$('#amz').value='';toast('Amazon wishlist saved')},()=>toast('That didn’t save. Try again'));return}
+  if(e.target.classList.contains('edf')){e.preventDefault();const id=e.target.dataset.id,n=$('#en').value.trim(),u=normUrl($('#eu').value);if(!n){$('#en').focus();return}
    if($('#eu').value.trim()&&!u){$('#eu').focus();toast('That link doesn’t look right');return}
    st.editing=null;edit(items=>{const i=items.find(x=>x.id===id);if(i){i.name=n.slice(0,120);i.url=u}});render();toast('Saved');return}
   if(e.target.id!=='addf')return;e.preventDefault();const n=$('#n').value.trim();if(!n){$('#n').focus();return}
@@ -218,6 +226,9 @@ function start(){const db=firebase.firestore();let wref=null,fref=null,wunsub=nu
   case 'ptier':st.tier=v;render();break;
   case 'star':edit(items=>{const i=items.find(x=>x.id===id);if(i)i.star=((i.star||0)+1)%3});break;
   case 'rm':{if(!item)break;const copy=Object.assign({},item);edit(items=>{const k=items.findIndex(x=>x.id===id);if(k>-1)items.splice(k,1)});toast('Removed '+item.name,()=>edit(items=>{if(!items.some(x=>x.id===copy.id))items.push(copy)}));break}
+  case 'amzedit':st.amzEdit=true;render();{const n=$('#amz');if(n)n.focus()}break;
+  case 'amzcancel':st.amzEdit=false;render();break;
+  case 'amzrm':{const old=st.wish.amazon;wref.update({amazon:firebase.firestore.FieldValue.delete(),updated:Date.now()}).then(()=>toast('Amazon wishlist removed',()=>wref.update({amazon:old,updated:Date.now()})),()=>toast('That didn’t save. Try again'));break}
   case 'share':{const url=location.origin+'/list.html?f='+st.wish.fam,text=`${st.wish.kid||'My'}’s wishlist. Tap “I’m getting this” on anything you pick so nobody doubles up.`;
    const copy=()=>(navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject()).then(()=>toast('Link copied. Paste it in a text or email'),()=>toast('Couldn’t copy. Try again'));
    if(navigator.share)navigator.share({title:text.split('.')[0],text,url}).catch(e=>{if(!e||e.name!=='AbortError')copy()});else copy();break}
